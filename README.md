@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Цифровой гардероб
 
-## Getting Started
+Личное веб-приложение для управления гардеробом и создания образов с помощью AI.
 
-First, run the development server:
+## Установка и запуск
 
+1. Установите зависимости:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Настройте Supabase:
+   - Создайте проект на [supabase.com](https://supabase.com)
+   - Выполните SQL из файла `supabase/migrations/0001_init.sql` в SQL Editor
+   - Скопируйте URL проекта и Anon Key
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Создайте файл `.env.local` на основе `.env.example`:
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Заполните переменные окружения:
+```
+NEXT_PUBLIC_SUPABASE_URL=your-project-url.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+OPENAI_API_KEY=your-openai-api-key
+```
 
-## Learn More
+4. Запустите приложение:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Откройте [http://localhost:3000](http://localhost:3000)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Текущий статус
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Виток 0 — Стабилизация:** ✅ В процессе
+- ✅ Зависимости установлены (`openai`, `zod`, `vitest`)
+- ✅ Миграции объединены в `supabase/migrations/0001_init.sql`
+- ✅ `.env.example` создан
+- ✅ `.gitignore` обновлён
+- ✅ Документация (`docs/PLAN.md`, `docs/AGENT_BRIEF.md`)
+- ⏳ README обновляется
+- ⏳ Проверка сборки
 
-## Deploy on Vercel
+**Завершённые функции:**
+- Базовый каркас Next.js с TypeScript
+- Подключение к Supabase
+- Модель данных (items, outfits, outfit_items)
+- Список всех вещей гардероба с фильтрами
+- Добавление/редактирование/удаление вещей
+- Загрузка и хранение фотографий
+- Автоматический анализ фото через AI (GPT-4o-mini)
+- Создание и сохранение образов
+- Подбор образов (правила, без AI)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Следующие витки:**
+- Виток 1: Улучшенное описание вещи с AI (warmth, formality, description, confidence)
+- Виток 2: AI-подбор образов по текстовому запросу
+- Виток 3: Семантический поиск, погода, коллаж образа
+- Виток 4: Дизайн-система, auth/RLS, деплой, demo-режим
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Подробный план: `docs/PLAN.md`
+
+## Стек
+
+- **Next.js 16.3.5** (App Router) + React 19
+- TypeScript
+- Tailwind CSS 4
+- Supabase (PostgreSQL + Storage + Auth)
+- OpenAI API (GPT-4o-mini для vision и текста)
+- Vitest (тестирование)
+
+## Архитектура
+
+- `app/` — страницы и API-роуты (Next.js App Router)
+- `components/` — React компоненты
+- `lib/` — утилиты, типы, Supabase клиент
+- `supabase/migrations/` — SQL миграции
+- `docs/` — документация и план разработки
+- `eval/` — golden set для оценки качества AI
+
+## Разработка
+
+```bash
+# Сборка
+npm run build
+
+# Линтинг
+npm run lint
+
+# Тесты
+npm test
+
+# Проверка типов
+npm run typecheck
+```
+
+## Лицензия
+
+Личный некоммерческий проект.

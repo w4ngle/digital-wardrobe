@@ -1,0 +1,35 @@
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+export type Item = {
+  id: string
+  photo_url: string | null
+  category: string
+  color: string
+  season: string
+  style: string
+  created_at: string
+}
+
+export type Outfit = {
+  id: string
+  name: string
+  occasion: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type OutfitItem = {
+  id: string
+  outfit_id: string
+  item_id: string
+  created_at: string
+}
+
+export type OutfitWithItems = Outfit & {
+  items: Item[]
+}
