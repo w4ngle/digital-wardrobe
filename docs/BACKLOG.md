@@ -13,12 +13,12 @@
 
 ## Виток 1 — «Описание вещи» (Must)
 
-- [ ] 3.1 Слой провайдера (lib/ai/provider.ts)
-- [ ] lib/taxonomy.ts — единый источник констант
-- [ ] 3.2.1 Схема v2 (warmth, formality, description, confidence)
-- [ ] 3.2.2 Сжатие фото на клиенте
-- [ ] 3.2.3 Подтверждение пользователем
-- [ ] 2.2 Миграция 0002_ai_fields.sql
+- [x] 3.1 Слой провайдера (lib/ai/provider.ts)
+- [x] lib/taxonomy.ts — единый источник констант
+- [x] 3.2.1 Схема v2 (warmth, formality, description, confidence)
+- [x] 3.2.2 Сжатие фото на клиенте
+- [x] 3.2.3 Подтверждение пользователем
+- [x] 2.2 Миграция 0002_ai_fields.sql
 - [ ] 4.1 Токены дизайна (раздел 6 PLAN.md)
 - [ ] 5.1 Golden set (30 фото)
 
