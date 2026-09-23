@@ -44,7 +44,11 @@ export default function Home() {
     color: string
     season: string
     style: string
+    description: string
+    warmth: number
+    formality: number
     photo_url: string | null
+    ai_meta: Record<string, any> | null
   }) => {
     const newItem = await createItem(itemData)
     setItems([newItem, ...items])

@@ -100,18 +100,13 @@ export async function createOutfit(
   outfit: Omit<Outfit, 'id' | 'created_at'>,
   itemIds: string[]
 ): Promise<OutfitWithItems> {
-  console.log('Creating outfit:', outfit)
   const { data: newOutfit, error: outfitError } = await supabase
     .from('outfits')
     .insert(outfit)
     .select()
     .single()
 
-  console.log('Insert result:', { data: newOutfit, error: outfitError })
-  if (outfitError) {
-    console.error('Outfit insert error:', JSON.stringify(outfitError, null, 2))
-    throw outfitError
-  }
+  if (outfitError) throw outfitError
 
   if (itemIds.length > 0) {
     const outfitItems = itemIds.map(item_id => ({

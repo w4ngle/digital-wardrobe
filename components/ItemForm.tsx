@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { uploadPhoto } from '@/lib/api'
+import { CATEGORIES, SEASONS, STYLES } from '@/lib/taxonomy'
 
 type ItemFormProps = {
   onSubmit: (item: {
@@ -9,56 +10,110 @@ type ItemFormProps = {
     color: string
     season: string
     style: string
+    description: string
+    warmth: number
+    formality: number
     photo_url: string | null
+    ai_meta: Record<string, any> | null
   }) => Promise<void>
   onCancel?: () => void
 }
-
-const categories = ['Верх', 'Низ', 'Обувь', 'Верхняя одежда', 'Аксессуар']
-const seasons = ['Лето', 'Зима', 'Демисезон', 'Всесезонное']
-const styles = ['Повседневный', 'Деловой', 'Спортивный', 'Нарядный']
 
 export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
   const [category, setCategory] = useState('')
   const [color, setColor] = useState('')
   const [season, setSeason] = useState('')
   const [style, setStyle] = useState('')
+  const [description, setDescription] = useState('')
+  const [warmth, setWarmth] = useState(3)
+  const [formality, setFormality] = useState(3)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
+  const [aiMeta, setAiMeta] = useState<Record<string, any> | null>(null)
+  const [lowConfidenceFields, setLowConfidenceFields] = useState<string[]>([])
+
+  // Сжатие изображения на клиенте
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')!
+
+          // Ресайз до максимум 1024px по большей стороне
+          const maxSize = 1024
+          let width = img.width
+          let height = img.height
+
+          if (width > height && width > maxSize) {
+            height = (height * maxSize) / width
+            width = maxSize
+          } else if (height > maxSize) {
+            width = (width * maxSize) / height
+            height = maxSize
+          }
+
+          canvas.width = width
+          canvas.height = height
+          ctx.drawImage(img, 0, 0, width, height)
+
+          // JPEG 0.8 качество
+          resolve(canvas.toDataURL('image/jpeg', 0.8))
+        }
+        img.onerror = reject
+        img.src = e.target?.result as string
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       setPhotoFile(file)
-      const reader = new FileReader()
-      reader.onloadend = async () => {
-        const dataUrl = reader.result as string
-        setPhotoPreview(dataUrl)
+
+      try {
+        const compressedDataUrl = await compressImage(file)
+        setPhotoPreview(compressedDataUrl)
 
         setAnalyzing(true)
-        try {
-          const response = await fetch('/api/analyze-photo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageUrl: dataUrl })
-          })
+        const response = await fetch('/api/analyze-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: compressedDataUrl })
+        })
 
-          if (response.ok) {
-            const result = await response.json()
-            if (result.category) setCategory(result.category)
-            if (result.color) setColor(result.color)
-            if (result.season) setSeason(result.season)
-            if (result.style) setStyle(result.style)
+        if (response.ok) {
+          const result = await response.json()
+          const confidence = result.confidence || 1
+          const meta = result._meta || {}
+
+          setCategory(result.category || '')
+          setColor(result.color || '')
+          setSeason(result.season || '')
+          setStyle(result.style || '')
+          setDescription(result.description || '')
+          setWarmth(result.warmth || 3)
+          setFormality(result.formality || 3)
+          setAiMeta({ ...meta, confidence, prompt_version: 'v2' })
+
+          // Помечаем поля с низкой уверенностью
+          const lowConf: string[] = []
+          if (confidence < 0.6) {
+            lowConf.push('category', 'color', 'season')
           }
-        } catch (error) {
-          console.error('Ошибка анализа фото:', error)
-        } finally {
-          setAnalyzing(false)
+          setLowConfidenceFields(lowConf)
         }
+      } catch (error) {
+        console.error('Ошибка анализа фото:', error)
+      } finally {
+        setAnalyzing(false)
       }
-      reader.readAsDataURL(file)
     }
   }
 
@@ -70,13 +125,29 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       if (photoFile) {
         photoUrl = await uploadPhoto(photoFile)
       }
-      await onSubmit({ category, color, season, style, photo_url: photoUrl })
+      await onSubmit({
+        category,
+        color,
+        season,
+        style,
+        description,
+        warmth,
+        formality,
+        photo_url: photoUrl,
+        ai_meta: aiMeta,
+      })
+      // Сброс формы
       setCategory('')
       setColor('')
       setSeason('')
       setStyle('')
+      setDescription('')
+      setWarmth(3)
+      setFormality(3)
       setPhotoFile(null)
       setPhotoPreview(null)
+      setAiMeta(null)
+      setLowConfidenceFields([])
     } catch (error) {
       console.error('Ошибка при добавлении вещи:', error)
       alert('Не удалось добавить вещь')
@@ -84,6 +155,8 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       setLoading(false)
     }
   }
+
+  const isLowConfidence = (field: string) => lowConfidenceFields.includes(field)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 bg-slate-800 p-6 rounded-lg border border-slate-700">
@@ -94,6 +167,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         <input
           type="file"
           accept="image/*"
+          capture="environment"
           onChange={handleFileChange}
           className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-cyan-600 file:text-white file:cursor-pointer hover:file:bg-cyan-700"
         />
@@ -109,20 +183,25 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         {analyzing && (
           <p className="mt-2 text-sm text-cyan-400">🔍 Анализирую фото...</p>
         )}
+        {aiMeta && (
+          <p className="mt-2 text-xs text-purple-400">✦ Заполнено ИИ</p>
+        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-slate-300 mb-2">
-          Категория
+          Категория {isLowConfidence('category') && <span className="text-orange-400">⚠ проверьте</span>}
         </label>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           required
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
+          className={`w-full bg-slate-900 border rounded px-3 py-2 text-slate-100 ${
+            isLowConfidence('category') ? 'border-orange-400' : 'border-slate-700'
+          }`}
         >
           <option value="">Выберите категорию</option>
-          {categories.map((cat) => (
+          {CATEGORIES.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
             </option>
@@ -132,7 +211,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
 
       <div>
         <label className="block text-sm font-medium text-slate-300 mb-2">
-          Цвет
+          Цвет {isLowConfidence('color') && <span className="text-orange-400">⚠ проверьте</span>}
         </label>
         <input
           type="text"
@@ -140,22 +219,26 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
           onChange={(e) => setColor(e.target.value)}
           required
           placeholder="Например: чёрный, синий"
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100 placeholder-slate-500"
+          className={`w-full bg-slate-900 border rounded px-3 py-2 text-slate-100 placeholder-slate-500 ${
+            isLowConfidence('color') ? 'border-orange-400' : 'border-slate-700'
+          }`}
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-slate-300 mb-2">
-          Сезон
+          Сезон {isLowConfidence('season') && <span className="text-orange-400">⚠ проверьте</span>}
         </label>
         <select
           value={season}
           onChange={(e) => setSeason(e.target.value)}
           required
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
+          className={`w-full bg-slate-900 border rounded px-3 py-2 text-slate-100 ${
+            isLowConfidence('season') ? 'border-orange-400' : 'border-slate-700'
+          }`}
         >
           <option value="">Выберите сезон</option>
-          {seasons.map((s) => (
+          {SEASONS.map((s) => (
             <option key={s} value={s}>
               {s}
             </option>
@@ -174,12 +257,57 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
           className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
         >
           <option value="">Выберите стиль</option>
-          {styles.map((st) => (
+          {STYLES.map((st) => (
             <option key={st} value={st}>
               {st}
             </option>
           ))}
         </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-300 mb-2">
+          Описание
+        </label>
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Краткое описание вещи"
+          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100 placeholder-slate-500"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            Теплота (1-5)
+          </label>
+          <input
+            type="number"
+            min="1"
+            max="5"
+            value={warmth}
+            onChange={(e) => setWarmth(Number(e.target.value))}
+            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
+          />
+          <p className="text-xs text-slate-500 mt-1">1 - лёгкая, 5 - тёплая</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            Формальность (1-5)
+          </label>
+          <input
+            type="number"
+            min="1"
+            max="5"
+            value={formality}
+            onChange={(e) => setFormality(Number(e.target.value))}
+            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
+          />
+          <p className="text-xs text-slate-500 mt-1">1 - спорт/дом, 5 - деловой</p>
+        </div>
       </div>
 
       <div className="flex gap-3 pt-2">

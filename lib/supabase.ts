@@ -12,6 +12,11 @@ export type Item = {
   color: string
   season: string
   style: string
+  description?: string | null
+  warmth?: number | null
+  formality?: number | null
+  ai_meta?: Record<string, any> | null
+  embedding?: number[] | null
   created_at: string
 }
 
@@ -20,6 +25,10 @@ export type Outfit = {
   name: string
   occasion: string | null
   notes: string | null
+  source?: string | null
+  prompt?: string | null
+  reasoning?: string | null
+  render_url?: string | null
   created_at: string
 }
 
