@@ -42,29 +42,59 @@ export default function TodayPage() {
     return result
   }, {}), [items])
 
-  function loadWeather() {
-    if (!navigator.geolocation) return alert('Геолокация не поддерживается')
-    setWeatherLoading(true)
-    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
-      try {
-        const url = new URL('https://api.open-meteo.com/v1/forecast')
-        url.searchParams.set('latitude', String(coords.latitude))
-        url.searchParams.set('longitude', String(coords.longitude))
-        url.searchParams.set('current', 'temperature_2m,apparent_temperature,weather_code')
-        url.searchParams.set('timezone', 'auto')
-        const response = await fetch(url)
-        if (!response.ok) throw new Error('weather')
-        const data = await response.json()
-        setWeather({ temperature: Math.round(data.current.temperature_2m), apparent: Math.round(data.current.apparent_temperature), code: data.current.weather_code })
-      } catch {
-        alert('Не удалось получить погоду')
-      } finally {
-        setWeatherLoading(false)
-      }
-    }, () => {
+  async function fetchWeather(latitude: number, longitude: number) {
+    try {
+      const url = new URL('https://api.open-meteo.com/v1/forecast')
+      url.searchParams.set('latitude', String(latitude))
+      url.searchParams.set('longitude', String(longitude))
+      url.searchParams.set('current', 'temperature_2m,apparent_temperature,weather_code')
+      url.searchParams.set('timezone', 'auto')
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('weather')
+      const data = await response.json()
+      setWeather({ temperature: Math.round(data.current.temperature_2m), apparent: Math.round(data.current.apparent_temperature), code: data.current.weather_code })
+    } catch {
+      alert('Не удалось получить погоду')
+    } finally {
       setWeatherLoading(false)
-      alert('Разрешите доступ к геолокации, чтобы показать погоду')
-    }, { timeout: 10000 })
+    }
+  }
+
+  function loadWeather() {
+    setWeatherLoading(true)
+    const locationManager = window.Telegram?.WebApp.LocationManager
+    if (locationManager) {
+      locationManager.init(() => {
+        if (!locationManager.isLocationAvailable) {
+          setWeatherLoading(false)
+          return alert('Геолокация недоступна на этом устройстве')
+        }
+        if (locationManager.isAccessRequested && !locationManager.isAccessGranted) {
+          setWeatherLoading(false)
+          locationManager.openSettings()
+          return
+        }
+        locationManager.getLocation((location) => {
+          if (location) return void fetchWeather(location.latitude, location.longitude)
+          setWeatherLoading(false)
+          alert('Доступ не выдан. Нажмите «Показать» ещё раз, чтобы открыть настройки')
+        })
+      })
+      return
+    }
+
+    if (!navigator.geolocation) {
+      setWeatherLoading(false)
+      return alert('Геолокация не поддерживается')
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => void fetchWeather(coords.latitude, coords.longitude),
+      () => {
+        setWeatherLoading(false)
+        alert('Разрешите доступ к геолокации, чтобы показать погоду')
+      },
+      { timeout: 10000 },
+    )
   }
 
   return (

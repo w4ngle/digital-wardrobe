@@ -4,12 +4,28 @@ import { ReactNode, useEffect, useState } from 'react'
 import Script from 'next/script'
 
 declare global {
+  type TelegramLocation = {
+    latitude: number
+    longitude: number
+  }
+
+  type TelegramLocationManager = {
+    isInited: boolean
+    isLocationAvailable: boolean
+    isAccessRequested: boolean
+    isAccessGranted: boolean
+    init: (callback?: () => void) => TelegramLocationManager
+    getLocation: (callback: (location: TelegramLocation | null) => void) => TelegramLocationManager
+    openSettings: () => TelegramLocationManager
+  }
+
   interface Window {
     Telegram?: {
       WebApp: {
         ready: () => void
         expand: () => void
         initData: string
+        LocationManager?: TelegramLocationManager
         setHeaderColor: (color: string) => void
         setBackgroundColor: (color: string) => void
       }
