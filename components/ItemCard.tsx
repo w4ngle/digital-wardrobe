@@ -20,59 +20,49 @@ export default function ItemCard({ item, onDelete, onEdit }: ItemCardProps) {
   }
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden hover:border-cyan-500 transition">
-      {item.photo_url && (
-        <div className="w-full h-48 bg-slate-900">
+    <article className="group overflow-hidden rounded-[22px] bg-[#faf8f4] shadow-[0_1px_0_rgba(41,37,31,0.05),0_8px_24px_rgba(41,37,31,0.06)]">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#e9e4db]">
+        {item.photo_url ? (
           <img
             src={item.photo_url}
-            alt={item.category}
-            className="w-full h-full object-cover"
+            alt={item.description || item.category}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
           />
-        </div>
-      )}
+        ) : (
+          <div className="flex h-full items-center justify-center text-3xl text-[#b1aa9e]">◇</div>
+        )}
 
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="text-lg font-medium text-slate-100">{item.category}</h3>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onEdit(item)}
-              className="text-cyan-400 hover:text-cyan-300 text-sm"
-              title="Редактировать"
-            >
-              ✎
-            </button>
-            <button
-              onClick={handleDelete}
-              className="text-red-400 hover:text-red-300 text-sm"
-              title="Удалить"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
+        <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-5.75rem)] truncate rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#4d4941] shadow-sm backdrop-blur">
+          {item.category}
+        </span>
 
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-slate-400">Цвет:</span>
-            <span className="text-slate-200">{item.color}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-400">Сезон:</span>
-            <span className="text-slate-200">{item.season}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-400">Стиль:</span>
-            <span className="text-slate-200">{item.style}</span>
-          </div>
-        </div>
-
-        <div className="mt-3 pt-3 border-t border-slate-700">
-          <span className="text-xs text-slate-500">
-            {new Date(item.created_at).toLocaleDateString('ru-RU')}
-          </span>
+        <div className="absolute right-2.5 top-2.5 flex gap-1.5">
+          <button
+            onClick={() => onEdit(item)}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sm text-[#454139] shadow-sm backdrop-blur transition active:scale-95"
+            aria-label="Редактировать вещь"
+          >
+            ✎
+          </button>
+          <button
+            onClick={handleDelete}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sm text-[#8c4a43] shadow-sm backdrop-blur transition active:scale-95"
+            aria-label="Удалить вещь"
+          >
+            ×
+          </button>
         </div>
       </div>
-    </div>
+
+      <div className="px-3.5 pb-4 pt-3">
+        <h2 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-[#2d2a25] sm:text-base">
+          {item.description || `${item.color}, ${item.category.toLowerCase()}`}
+        </h2>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-[#eee9df] px-2 py-1 text-[10px] text-[#746e64]">{item.color}</span>
+          <span className="rounded-full bg-[#e5ece7] px-2 py-1 text-[10px] text-[#52635a]">{item.season}</span>
+        </div>
+      </div>
+    </article>
   )
 }

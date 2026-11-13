@@ -26,68 +26,66 @@ export default function ItemFilters({
   const hasFilters = category || season || style
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-slate-300">Фильтры</h3>
+    <section className="mb-7">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-[#454139]">Категории</h2>
         {hasFilters && (
           <button
             onClick={onReset}
-            className="text-xs text-cyan-400 hover:text-cyan-300"
+            className="text-xs font-medium text-[#65786d]"
           >
             Сбросить
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Категория</label>
-          <select
-            value={category}
-            onChange={(e) => onCategoryChange(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100"
+      <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
+        {['', ...categories].map((cat) => (
+          <button
+            key={cat || 'all'}
+            onClick={() => onCategoryChange(cat)}
+            className={`shrink-0 rounded-full px-4 py-2 text-xs font-medium transition ${
+              category === cat ? 'bg-[#26372f] text-white' : 'border border-[#ddd7cc] bg-[#faf8f4] text-[#686258]'
+            }`}
           >
-            <option value="">Все</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
+            {cat || 'Все вещи'}
+          </button>
+        ))}
+      </div>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Сезон</label>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="relative">
+          <span className="sr-only">Сезон</span>
           <select
             value={season}
             onChange={(e) => onSeasonChange(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100"
+            className="w-full appearance-none rounded-xl border border-[#ddd7cc] bg-[#faf8f4] px-3 py-2.5 text-xs text-[#5e594f]"
           >
-            <option value="">Все</option>
+            <option value="">Любой сезон</option>
             {seasons.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
             ))}
           </select>
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Стиль</label>
+        <label className="relative">
+          <span className="sr-only">Стиль</span>
           <select
             value={style}
             onChange={(e) => onStyleChange(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100"
+            className="w-full appearance-none rounded-xl border border-[#ddd7cc] bg-[#faf8f4] px-3 py-2.5 text-xs text-[#5e594f]"
           >
-            <option value="">Все</option>
+            <option value="">Любой стиль</option>
             {styles.map((st) => (
               <option key={st} value={st}>
                 {st}
               </option>
             ))}
           </select>
-        </div>
+        </label>
       </div>
-    </div>
+    </section>
   )
 }

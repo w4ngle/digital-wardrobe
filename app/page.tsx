@@ -73,30 +73,34 @@ export default function Home() {
   })
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="max-w-6xl mx-auto px-4 pb-28 pt-[max(24px,env(safe-area-inset-top))]">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-100 mb-2">
-            Цифровой гардероб
-          </h1>
-          <p className="text-slate-400">
-            Управляйте своим гардеробом и создавайте образы
-          </p>
-        </header>
+    <main className="min-h-screen bg-[#f4f1eb] text-[#201f1c]">
+      <div className="mx-auto max-w-6xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
+        <header className="mb-7 flex items-start justify-between gap-4">
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#817b70]">
+              Моя коллекция
+            </p>
+            <h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#201f1c] sm:text-4xl">
+              Гардероб
+            </h1>
+            <p className="mt-2 text-sm text-[#817b70]">
+              {loading ? 'Загружаем вещи…' : `${items.length} ${items.length === 1 ? 'вещь' : items.length > 1 && items.length < 5 ? 'вещи' : 'вещей'}`}
+            </p>
+          </div>
 
-        <div className="mb-6">
           {!showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className="w-full rounded-xl bg-accent px-6 py-3 font-medium text-white transition sm:w-auto"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#26372f] text-2xl font-light text-white shadow-sm transition active:scale-95"
+              aria-label="Добавить вещь"
             >
-              + Добавить вещь
+              +
             </button>
           )}
-        </div>
+        </header>
 
         {showForm && (
-          <div className="mb-6">
+          <div className="mb-7 overflow-hidden rounded-[24px] shadow-sm">
             <ItemForm
               onSubmit={handleCreateItem}
               onCancel={() => setShowForm(false)}
@@ -115,20 +119,23 @@ export default function Home() {
         />
 
         {loading ? (
-          <div className="text-center py-12 text-slate-400">
-            Загрузка...
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5">
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="aspect-[3/4] animate-pulse rounded-[22px] bg-[#e6e1d8]" />
+            ))}
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="text-center py-12 bg-slate-900 rounded-lg border border-slate-800">
-            <p className="text-slate-400 mb-4">
+          <div className="rounded-[24px] border border-[#ded8cd] bg-[#faf8f4] px-6 py-14 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#ece7dd] text-xl">◇</div>
+            <p className="mb-2 font-medium text-[#454139]">
               {items.length === 0 ? 'Ваш гардероб пока пуст' : 'Ничего не найдено'}
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-[#8c867b]">
               {items.length === 0 ? 'Добавьте первую вещь, чтобы начать' : 'Попробуйте изменить фильтры'}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7">
             {filteredItems.map((item) => (
               <ItemCard
                 key={item.id}
@@ -140,9 +147,11 @@ export default function Home() {
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t border-slate-800 text-center text-sm text-slate-500">
-          Показано: {filteredItems.length} из {items.length}
-        </div>
+        {!loading && items.length > 0 && (
+          <p className="mt-10 text-center text-xs text-[#9b958a]">
+            Показано {filteredItems.length} из {items.length}
+          </p>
+        )}
       </div>
 
       {editingItem && (
