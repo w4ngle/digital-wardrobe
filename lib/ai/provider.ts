@@ -5,9 +5,11 @@ import OpenAI from 'openai'
 import { ItemAnalysisSchema, OutfitRecommendationSchema } from './schemas'
 import { ANALYZE_PHOTO_PROMPT_V2 } from './prompts'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-})
+function getOpenAI() {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured')
+  return new OpenAI({ apiKey })
+}
 
 // Получение модели из env с fallback
 function getModel(envKey: string, fallback: string): string {
@@ -18,6 +20,7 @@ function getModel(envKey: string, fallback: string): string {
  * Анализ фото вещи через vision-модель
  */
 export async function describeImage(imageDataUrl: string) {
+  const openai = getOpenAI()
   const model = getModel('AI_VISION_MODEL', 'gpt-4o-mini')
 
   const completion = await openai.chat.completions.create({
@@ -60,6 +63,7 @@ export async function chatJSON(params: {
   user: string
   schema?: 'outfit' | 'item'
 }) {
+  const openai = getOpenAI()
   const model = getModel('AI_TEXT_MODEL', 'gpt-4o-mini')
 
   const completion = await openai.chat.completions.create({
@@ -101,6 +105,7 @@ export async function chatJSON(params: {
  * Создание эмбеддинга для семантического поиска
  */
 export async function embed(text: string): Promise<number[]> {
+  const openai = getOpenAI()
   const model = getModel('AI_EMBED_MODEL', 'text-embedding-3-small')
 
   const response = await openai.embeddings.create({
@@ -115,6 +120,7 @@ export async function embed(text: string): Promise<number[]> {
  * Генерация изображения образа (опционально, дорого)
  */
 export async function renderImage(prompt: string): Promise<string> {
+  const openai = getOpenAI()
   const model = getModel('AI_IMAGE_MODEL', 'dall-e-3')
 
   const response = await openai.images.generate({
