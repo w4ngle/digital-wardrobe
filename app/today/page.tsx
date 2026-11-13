@@ -103,8 +103,8 @@ export default function TodayPage() {
     <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
       <div className="mx-auto max-w-4xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
         <header className="mb-7">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.22em] text-[#81786d]">Гардероб Эмилии</p>
-          <h1 className="font-display text-6xl font-semibold leading-none tracking-[-0.04em]">Сегодня</h1>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#81786d]">Для тебя, зайчик</p>
+          <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Сегодня</h1>
         </header>
 
         <section className="mb-6 rounded-[28px] bg-[#1f422f] p-5 text-white">
@@ -120,7 +120,7 @@ export default function TodayPage() {
 
         <section className="mb-7 overflow-hidden rounded-[28px] border border-[#dfd4c4] bg-[#fffaf2]">
           <div className="flex items-end justify-between px-5 pb-4 pt-5">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6f1820]">Для тебя</p><h2 className="font-display mt-1 text-4xl font-semibold italic text-[#6f1820]">Образ дня</h2></div>
+            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6f1820]">Для тебя</p><h2 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#6f1820]">Образ дня</h2></div>
             <Sparkle size={28} className="text-[#6f1820]" weight="duotone" aria-hidden />
           </div>
           {heroOutfit ? <OutfitCollage items={heroOutfit.items} /> : <div className="px-5 pb-6 text-sm text-[#81786d]">Собери первый образ — и он появится здесь.</div>}

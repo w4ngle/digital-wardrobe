@@ -51,7 +51,7 @@ export default function RecommendPage() {
       <div className="mx-auto max-w-3xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
         <header className="mb-7">
           <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#81786d]">Личный стилист</p>
-          <h1 className="font-display text-5xl font-semibold leading-none tracking-[-0.04em]">Что надеть?</h1>
+          <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Что надеть?</h1>
           <p className="mt-2 text-sm text-[#817b70]">Подберём сочетание по погоде, стилю и поводу</p>
         </header>
 

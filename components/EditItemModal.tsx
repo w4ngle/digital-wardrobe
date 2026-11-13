@@ -64,7 +64,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#14231b]/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[28px] bg-[#fffaf2] sm:rounded-[28px]" onClick={e => e.stopPropagation()}>
         <div className="p-6">
-          <div className="mb-5 flex items-center justify-between"><h2 className="font-display text-3xl font-semibold text-[#1e3026]">Редактировать вещь</h2><button type="button" onClick={onClose} className="rounded-full p-2 text-[#6f1820]" aria-label="Закрыть"><X size={22} aria-hidden /></button></div>
+          <div className="mb-5 flex items-center justify-between"><h2 className="text-2xl font-bold text-[#1e3026]">Редактировать вещь</h2><button type="button" onClick={onClose} className="rounded-full p-2 text-[#6f1820]" aria-label="Закрыть"><X size={22} aria-hidden /></button></div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

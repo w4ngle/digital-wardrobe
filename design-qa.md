@@ -15,7 +15,7 @@
 - Spacing and layout: the implementation preserves the reference's generous side margins, large title, weather block, dominant outfit area, pill action, and fixed navigation.
 - Colors: warm ivory, forest green, burgundy, and restrained tan borders match the selected direction with accessible foreground contrast.
 - Images: the reference's single styled editorial photograph is intentionally replaced by real wardrobe item photos in a collage so the core product remains truthful and usable.
-- Copy: app-specific text is concise, personal to Emilia, and preserves the selected visual hierarchy.
+- Copy: app-specific text is concise, affectionate without using a name, and preserves the selected visual hierarchy.
 
 ## Full-view comparison evidence
 

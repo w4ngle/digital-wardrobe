@@ -78,7 +78,7 @@ export default function OutfitsPage() {
         <header className="mb-7 flex items-start justify-between gap-4">
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#817b70]">Мои сочетания</p>
-            <h1 className="font-display text-5xl font-semibold leading-none tracking-[-0.04em]">Образы</h1>
+            <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Образы</h1>
             <p className="mt-2 text-sm text-[#817b70]">{loading ? 'Загружаем…' : `${outfits.length} сохранено`}</p>
           </div>
           <button onClick={() => setShowForm((current) => !current)} className="rounded-full bg-[#1f422f] px-4 py-3 text-sm font-medium text-white shadow-sm active:scale-95">

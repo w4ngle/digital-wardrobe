@@ -25,10 +25,6 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-.font-display {
-  font-family: var(--font-display), Georgia, serif;
-}
-
 ::selection {
   background: #d8c2ad;
   color: #1e3026;
