@@ -43,6 +43,15 @@ function colorScore(first: string, second: string) {
   ) ? 2 : 0
 }
 
+function outfitBalance(items: Item[]) {
+  if (items.length < 2) return 0
+  const warmth = items.map(inferredWarmth)
+  const formality = items.map(inferredFormality)
+  const warmthSpread = Math.max(...warmth) - Math.min(...warmth)
+  const formalitySpread = Math.max(...formality) - Math.min(...formality)
+  return Math.max(0, 3 - warmthSpread) + Math.max(0, 3 - formalitySpread)
+}
+
 function inferredWarmth(item: Item) {
   if (item.warmth) return item.warmth
   if (item.season === 'Лето') return 1
@@ -84,22 +93,24 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
   const outerwear: Array<Item | null> = request.weather === 'Тепло'
     ? [null]
     : outerwearItems.length > 0 ? outerwearItems : [null]
-  const accessory = byCategory('Аксессуар')[0] ?? null
+  const accessories: Array<Item | null> = [null, ...byCategory('Аксессуар').slice(0, 4)]
   const candidates: OutfitRecommendation[] = []
 
   for (const top of tops) {
     for (const bottom of bottoms) {
       for (const shoe of shoes) {
         for (const layer of outerwear) {
-          const outfit = [top, bottom, shoe, layer, accessory].filter((item): item is Item => item !== null)
-          const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request), 0)
-          const colors = colorScore(top.color, bottom.color) + (shoe ? colorScore(bottom.color, shoe.color) : 0)
-          const coldLayerPenalty = request.weather === 'Холодно' && !layer ? -5 : 0
-          candidates.push({
-            items: outfit,
-            score: itemTotal + colors + coldLayerPenalty,
-            reason: buildReason(request, Boolean(layer)),
-          })
+          for (const accessory of accessories) {
+            const outfit = [top, bottom, shoe, layer, accessory].filter((item): item is Item => item !== null)
+            const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request), 0)
+            const colors = colorScore(top.color, bottom.color) + (shoe ? colorScore(bottom.color, shoe.color) : 0)
+            const coldLayerPenalty = request.weather === 'Холодно' && !layer ? -5 : 0
+            candidates.push({
+              items: outfit,
+              score: itemTotal + colors + outfitBalance(outfit) + coldLayerPenalty,
+              reason: buildReason(request, Boolean(layer)),
+            })
+          }
         }
       }
     }
@@ -117,13 +128,25 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
     }] : []
   }
 
-  return candidates
+  const unique = candidates
     .sort((a, b) => b.score - a.score)
     .filter((candidate, index, sorted) => {
       const key = candidate.items.map((item) => item.id).sort().join(':')
       return sorted.findIndex((other) => other.items.map((item) => item.id).sort().join(':') === key) === index
     })
-    .slice(0, limit)
+
+  const varied: OutfitRecommendation[] = []
+  for (const candidate of unique) {
+    const core = candidate.items.filter((item) => item.category !== 'Аксессуар')
+    const isTooSimilar = varied.some((selected) => {
+      const selectedIds = new Set(selected.items.filter((item) => item.category !== 'Аксессуар').map((item) => item.id))
+      return core.filter((item) => selectedIds.has(item.id)).length >= Math.max(2, core.length - 1)
+    })
+    if (!isTooSimilar || varied.length === 0) varied.push(candidate)
+    if (varied.length === limit) return varied
+  }
+
+  return [...varied, ...unique.filter((candidate) => !varied.includes(candidate))].slice(0, limit)
 }
 
 export function recommendOutfit(items: Item[], season: string, style: string) {

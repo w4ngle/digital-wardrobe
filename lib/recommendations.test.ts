@@ -51,4 +51,18 @@ describe('recommendOutfits', () => {
 
     expect(result.items.map((candidate) => candidate.id)).toContain('cap')
   })
+
+  it('returns meaningfully different variants when the wardrobe allows it', () => {
+    const results = recommendOutfits([
+      item('top-1', 'Верх', 'белый'),
+      item('top-2', 'Верх', 'серый'),
+      item('bottom-1', 'Низ', 'черный'),
+      item('bottom-2', 'Низ', 'синий'),
+      item('shoes-1', 'Обувь', 'белый'),
+      item('shoes-2', 'Обувь', 'черный'),
+    ], { occasion: 'На каждый день', weather: 'Тепло', style: 'Повседневный' })
+
+    expect(results).toHaveLength(3)
+    expect(new Set(results.flatMap((result) => result.items.map((candidate) => candidate.id))).size).toBeGreaterThan(3)
+  })
 })

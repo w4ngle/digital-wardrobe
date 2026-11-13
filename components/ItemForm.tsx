@@ -127,13 +127,16 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         <label className="block text-sm font-medium text-slate-300 mb-2">
           Фото
         </label>
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileChange}
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-cyan-600 file:text-white file:cursor-pointer hover:file:bg-cyan-700"
-        />
+        <div className="grid grid-cols-2 gap-2">
+          <label className="cursor-pointer rounded-lg bg-cyan-600 px-3 py-3 text-center text-sm font-medium text-white active:bg-cyan-700">
+            📷 Сделать фото
+            <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="sr-only" />
+          </label>
+          <label className="cursor-pointer rounded-lg border border-slate-600 bg-slate-700 px-3 py-3 text-center text-sm font-medium text-slate-100 active:bg-slate-600">
+            🖼️ Из галереи
+            <input type="file" accept="image/*" onChange={handleFileChange} className="sr-only" />
+          </label>
+        </div>
         {photoPreview && (
           <div className="mt-3 relative w-32 h-32">
             <img
@@ -238,8 +241,9 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
             type="number"
             min="1"
             max="5"
-            value={warmth}
-            onChange={(e) => setWarmth(Number(e.target.value))}
+            required
+            value={Number.isNaN(warmth) ? '' : warmth}
+            onChange={(e) => setWarmth(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)}
             className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
           />
           <p className="text-xs text-slate-500 mt-1">1 - лёгкая, 5 - тёплая</p>
@@ -253,8 +257,9 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
             type="number"
             min="1"
             max="5"
-            value={formality}
-            onChange={(e) => setFormality(Number(e.target.value))}
+            required
+            value={Number.isNaN(formality) ? '' : formality}
+            onChange={(e) => setFormality(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)}
             className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
           />
           <p className="text-xs text-slate-500 mt-1">1 - спорт/дом, 5 - деловой</p>
