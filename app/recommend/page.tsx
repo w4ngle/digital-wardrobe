@@ -47,19 +47,19 @@ export default function RecommendPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f1eb] text-[#201f1c]">
+    <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
       <div className="mx-auto max-w-3xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
         <header className="mb-7">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#817b70]">Бесплатно · без ИИ</p>
-          <h1 className="text-3xl font-semibold tracking-[-0.04em]">Что надеть?</h1>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#81786d]">Личный стилист</p>
+          <h1 className="font-display text-5xl font-semibold leading-none tracking-[-0.04em]">Что надеть?</h1>
           <p className="mt-2 text-sm text-[#817b70]">Подберём сочетание по погоде, стилю и поводу</p>
         </header>
 
-        <section className="space-y-5 rounded-[24px] bg-[#faf8f4] p-4 shadow-[0_8px_30px_rgba(41,37,31,0.06)] sm:p-6">
+        <section className="space-y-5 rounded-[24px] border border-[#dfd4c4] bg-[#fffaf2] p-4 sm:p-6">
           <div><h2 className="mb-3 text-sm font-semibold">Куда</h2><Choice values={OCCASIONS} value={occasion} onChange={setOccasion} /></div>
           <div><h2 className="mb-3 text-sm font-semibold">Погода</h2><Choice values={WEATHER} value={weather} onChange={setWeather} /></div>
           <div><h2 className="mb-3 text-sm font-semibold">Настроение</h2><Choice values={STYLES} value={style} onChange={setStyle} /></div>
-          <button type="button" disabled={loading || items.length < 2} onClick={handleRecommend} className="w-full rounded-xl bg-[#26372f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
+          <button type="button" disabled={loading || items.length < 2} onClick={handleRecommend} className="w-full rounded-full bg-[#1f422f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
             {loading ? 'Загружаем гардероб…' : 'Показать варианты'}
           </button>
         </section>

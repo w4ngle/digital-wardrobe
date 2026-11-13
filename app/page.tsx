@@ -7,6 +7,7 @@ import ItemCard from '@/components/ItemCard'
 import ItemForm from '@/components/ItemForm'
 import ItemFilters from '@/components/ItemFilters'
 import EditItemModal from '@/components/EditItemModal'
+import { Plus } from '@phosphor-icons/react'
 
 export default function Home() {
   const [items, setItems] = useState<Item[]>([])
@@ -83,14 +84,14 @@ export default function Home() {
   })
 
   return (
-    <main className="min-h-screen bg-[#f4f1eb] text-[#201f1c]">
+    <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
       <div className="mx-auto max-w-6xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
         <header className="mb-7 flex items-start justify-between gap-4">
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#817b70]">
-              Моя коллекция
+              Гардероб Эмилии
             </p>
-            <h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#201f1c] sm:text-4xl">
+            <h1 className="font-display text-5xl font-semibold leading-none tracking-[-0.04em] text-[#1e3026] sm:text-6xl">
               Гардероб
             </h1>
             <p className="mt-2 text-sm text-[#817b70]">
@@ -101,10 +102,10 @@ export default function Home() {
           {!showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#26372f] text-2xl font-light text-white shadow-sm transition active:scale-95"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1f422f] text-white shadow-sm transition active:scale-95"
               aria-label="Добавить вещь"
             >
-              +
+              <Plus size={22} aria-hidden />
             </button>
           )}
         </header>

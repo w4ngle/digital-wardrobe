@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createOutfit, deleteOutfit, getItems, getOutfits, updateOutfit } from '@/lib/api'
 import { Item, OutfitWithItems } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
+import { Heart, X } from '@phosphor-icons/react'
 
 export default function OutfitsPage() {
   const [outfits, setOutfits] = useState<OutfitWithItems[]>([])
@@ -72,15 +73,15 @@ export default function OutfitsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f1eb] text-[#201f1c]">
+    <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
       <div className="mx-auto max-w-5xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
         <header className="mb-7 flex items-start justify-between gap-4">
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#817b70]">Мои сочетания</p>
-            <h1 className="text-3xl font-semibold tracking-[-0.04em]">Образы</h1>
+            <h1 className="font-display text-5xl font-semibold leading-none tracking-[-0.04em]">Образы</h1>
             <p className="mt-2 text-sm text-[#817b70]">{loading ? 'Загружаем…' : `${outfits.length} сохранено`}</p>
           </div>
-          <button onClick={() => setShowForm((current) => !current)} className="rounded-full bg-[#26372f] px-4 py-3 text-sm font-medium text-white shadow-sm active:scale-95">
+          <button onClick={() => setShowForm((current) => !current)} className="rounded-full bg-[#1f422f] px-4 py-3 text-sm font-medium text-white shadow-sm active:scale-95">
             {showForm ? 'Закрыть' : '+ Собрать'}
           </button>
         </header>
@@ -129,8 +130,8 @@ export default function OutfitsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><h2 className="truncate font-semibold">{outfit.name}</h2><p className="mt-1 truncate text-xs text-[#817b70]">{outfit.occasion || `${outfit.items.length} вещи`}</p></div>
                     <div className="flex shrink-0 gap-2">
-                      <button onClick={() => handleFavorite(outfit)} className="text-lg text-[#9b6b65]" aria-label={outfit.is_favorite ? 'Убрать из избранного' : 'Добавить в избранное'}>{outfit.is_favorite ? '♥' : '♡'}</button>
-                      <button onClick={() => handleDelete(outfit.id)} className="text-lg text-[#9b6b65]" aria-label="Удалить образ">×</button>
+                      <button onClick={() => handleFavorite(outfit)} className="text-[#6f1820]" aria-label={outfit.is_favorite ? 'Убрать из избранного' : 'Добавить в избранное'}><Heart size={20} weight={outfit.is_favorite ? 'fill' : 'regular'} aria-hidden /></button>
+                      <button onClick={() => handleDelete(outfit.id)} className="text-[#6f1820]" aria-label="Удалить образ"><X size={20} aria-hidden /></button>
                     </div>
                   </div>
                   {outfit.notes && <p className="mt-3 line-clamp-2 text-xs leading-5 text-[#746e64]">{outfit.notes}</p>}

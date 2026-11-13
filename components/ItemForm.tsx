@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { uploadPhoto } from '@/lib/api'
 import { CATEGORIES, SEASONS, STYLES } from '@/lib/taxonomy'
+import { Camera, ImageSquare } from '@phosphor-icons/react'
 
 type ItemFormProps = {
   onSubmit: (item: {
@@ -122,18 +123,18 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-slate-800 p-6 rounded-lg border border-slate-700">
+    <form onSubmit={handleSubmit} className="space-y-5 rounded-[24px] border border-[#dfd4c4] bg-[#fffaf2] p-5 sm:p-6">
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
           Фото
         </label>
         <div className="grid grid-cols-2 gap-2">
-          <label className="cursor-pointer rounded-lg bg-cyan-600 px-3 py-3 text-center text-sm font-medium text-white active:bg-cyan-700">
-            📷 Сделать фото
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#1f422f] px-3 py-3 text-center text-sm font-semibold text-white active:scale-[0.98]">
+            <Camera size={18} aria-hidden /> Сделать фото
             <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="sr-only" />
           </label>
-          <label className="cursor-pointer rounded-lg border border-slate-600 bg-slate-700 px-3 py-3 text-center text-sm font-medium text-slate-100 active:bg-slate-600">
-            🖼️ Из галереи
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#cfc2b2] bg-[#f5ede2] px-3 py-3 text-center text-sm font-semibold text-[#1f422f] active:scale-[0.98]">
+            <ImageSquare size={18} aria-hidden /> Из галереи
             <input type="file" accept="image/*" onChange={handleFileChange} className="sr-only" />
           </label>
         </div>
@@ -142,21 +143,21 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
             <img
               src={photoPreview}
               alt="Превью"
-              className="w-full h-full object-cover rounded border border-slate-700"
+              className="h-full w-full rounded-xl border border-[#dfd4c4] object-cover"
             />
           </div>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
           Категория
         </label>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           required
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
+          className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
         >
           <option value="">Выберите категорию</option>
           {CATEGORIES.map((cat) => (
@@ -168,7 +169,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
           Цвет
         </label>
         <input
@@ -177,19 +178,19 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
           onChange={(e) => setColor(e.target.value)}
           required
           placeholder="Например: чёрный, синий"
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100 placeholder-slate-500"
+          className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026] placeholder:text-[#9b9185]"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
           Сезон
         </label>
         <select
           value={season}
           onChange={(e) => setSeason(e.target.value)}
           required
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
+          className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
         >
           <option value="">Выберите сезон</option>
           {SEASONS.map((s) => (
@@ -201,14 +202,14 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
           Стиль
         </label>
         <select
           value={style}
           onChange={(e) => setStyle(e.target.value)}
           required
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
+          className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
         >
           <option value="">Выберите стиль</option>
           {STYLES.map((st) => (
@@ -220,7 +221,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
+        <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
           Описание
         </label>
         <input
@@ -228,13 +229,13 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Краткое описание вещи"
-          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100 placeholder-slate-500"
+          className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026] placeholder:text-[#9b9185]"
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
+          <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
             Теплота (1-5)
           </label>
           <input
@@ -244,13 +245,13 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
             required
             value={Number.isNaN(warmth) ? '' : warmth}
             onChange={(e) => setWarmth(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)}
-            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
+            className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
           />
-          <p className="text-xs text-slate-500 mt-1">1 - лёгкая, 5 - тёплая</p>
+          <p className="mt-1 text-xs text-[#81786d]">1 — лёгкая, 5 — тёплая</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
+          <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
             Формальность (1-5)
           </label>
           <input
@@ -260,9 +261,9 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
             required
             value={Number.isNaN(formality) ? '' : formality}
             onChange={(e) => setFormality(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)}
-            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
+            className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
           />
-          <p className="text-xs text-slate-500 mt-1">1 - спорт/дом, 5 - деловой</p>
+          <p className="mt-1 text-xs text-[#81786d]">1 — спорт/дом, 5 — деловой</p>
         </div>
       </div>
 
@@ -270,7 +271,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 text-white font-medium py-2 px-4 rounded transition"
+          className="flex-1 rounded-xl bg-[#6f1820] px-4 py-3 font-semibold text-white transition active:scale-[0.98] disabled:opacity-40"
         >
           {loading ? 'Добавление...' : 'Добавить вещь'}
         </button>
@@ -278,7 +279,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition"
+            className="rounded-xl border border-[#cfc2b2] px-4 py-3 font-semibold text-[#685f55] transition active:scale-[0.98]"
           >
             Отмена
           </button>

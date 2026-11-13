@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getItems, getOutfits } from '@/lib/api'
 import { Item, OutfitWithItems } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
+import { Cloud, Sparkle } from '@phosphor-icons/react'
 
 type Weather = { temperature: number, apparent: number, code: number }
 
@@ -35,6 +36,7 @@ export default function TodayPage() {
   const favoriteItems = items.filter((item) => item.is_favorite)
   const favoriteOutfits = outfits.filter((outfit) => outfit.is_favorite)
   const planned = outfits.filter((outfit) => outfit.planned_for).sort((a, b) => a.planned_for!.localeCompare(b.planned_for!))
+  const heroOutfit = planned[0] || favoriteOutfits[0] || outfits[0]
   const totalWears = items.reduce((sum, item) => sum + (item.wear_count || 0), 0)
   const mostWorn = [...items].sort((a, b) => (b.wear_count || 0) - (a.wear_count || 0))[0]
   const categoryCount = useMemo(() => items.reduce<Record<string, number>>((result, item) => {
@@ -98,28 +100,37 @@ export default function TodayPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f1eb] text-[#201f1c]">
+    <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
       <div className="mx-auto max-w-4xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
         <header className="mb-7">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#817b70]">Обзор гардероба</p>
-          <h1 className="text-3xl font-semibold tracking-[-0.04em]">Сегодня</h1>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.22em] text-[#81786d]">Гардероб Эмилии</p>
+          <h1 className="font-display text-6xl font-semibold leading-none tracking-[-0.04em]">Сегодня</h1>
         </header>
 
-        <section className="mb-5 rounded-[24px] bg-[#26372f] p-5 text-white">
+        <section className="mb-6 rounded-[28px] bg-[#1f422f] p-5 text-white">
           {weather ? (
             <div className="flex items-center justify-between gap-4">
               <div><p className="text-sm text-white/70">Сейчас · {weatherLabel(weather.code)}</p><p className="mt-1 text-4xl font-semibold">{weather.temperature}°</p><p className="mt-1 text-xs text-white/60">Ощущается как {weather.apparent}°</p></div>
-              <Link href="/recommend" className="rounded-full bg-white px-4 py-3 text-sm font-semibold text-[#26372f]">Подобрать образ</Link>
+              <Link href="/recommend" className="rounded-full bg-[#fffaf2] px-4 py-3 text-sm font-semibold text-[#1f422f]">Подобрать образ</Link>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-4"><div><h2 className="font-semibold">Погода рядом</h2><p className="mt-1 text-sm text-white/65">Поможет выбрать одежду по температуре</p></div><button onClick={loadWeather} disabled={weatherLoading} className="shrink-0 rounded-full bg-white px-4 py-3 text-sm font-semibold text-[#26372f] disabled:opacity-60">{weatherLoading ? 'Загрузка…' : 'Показать'}</button></div>
+            <div className="flex items-center justify-between gap-4"><div className="flex items-start gap-3"><Cloud size={28} className="mt-0.5 shrink-0" aria-hidden /><div><h2 className="font-semibold">Погода рядом</h2><p className="mt-1 text-sm text-white/65">Поможет выбрать одежду по температуре</p></div></div><button onClick={loadWeather} disabled={weatherLoading} className="shrink-0 rounded-full bg-[#fffaf2] px-4 py-3 text-sm font-semibold text-[#1f422f] disabled:opacity-60">{weatherLoading ? 'Загрузка…' : 'Показать'}</button></div>
           )}
         </section>
 
+        <section className="mb-7 overflow-hidden rounded-[28px] border border-[#dfd4c4] bg-[#fffaf2]">
+          <div className="flex items-end justify-between px-5 pb-4 pt-5">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6f1820]">Для тебя</p><h2 className="font-display mt-1 text-4xl font-semibold italic text-[#6f1820]">Образ дня</h2></div>
+            <Sparkle size={28} className="text-[#6f1820]" weight="duotone" aria-hidden />
+          </div>
+          {heroOutfit ? <OutfitCollage items={heroOutfit.items} /> : <div className="px-5 pb-6 text-sm text-[#81786d]">Собери первый образ — и он появится здесь.</div>}
+          <div className="p-4"><Link href="/recommend" className="block rounded-full bg-[#1f422f] px-5 py-3.5 text-center text-sm font-semibold text-white">Подобрать другой образ</Link></div>
+        </section>
+
         <section className="mb-7 grid grid-cols-3 gap-2">
-          <div className="rounded-2xl bg-[#faf8f4] p-3"><p className="text-2xl font-semibold">{items.length}</p><p className="mt-1 text-[10px] text-[#817b70]">Вещей</p></div>
-          <div className="rounded-2xl bg-[#faf8f4] p-3"><p className="text-2xl font-semibold">{totalWears}</p><p className="mt-1 text-[10px] text-[#817b70]">Надеваний</p></div>
-          <div className="rounded-2xl bg-[#faf8f4] p-3"><p className="text-2xl font-semibold">{favoriteItems.length + favoriteOutfits.length}</p><p className="mt-1 text-[10px] text-[#817b70]">Избранных</p></div>
+          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{items.length}</p><p className="mt-1 text-[10px] text-[#81786d]">Вещей</p></div>
+          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{totalWears}</p><p className="mt-1 text-[10px] text-[#81786d]">Надеваний</p></div>
+          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{favoriteItems.length + favoriteOutfits.length}</p><p className="mt-1 text-[10px] text-[#81786d]">Избранных</p></div>
         </section>
 
         <section className="mb-7">

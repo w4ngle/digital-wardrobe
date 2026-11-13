@@ -1,6 +1,7 @@
 'use client'
 
 import { Item } from '@/lib/supabase'
+import { CoatHanger, Heart, PencilSimple, X } from '@phosphor-icons/react'
 
 type ItemCardProps = {
   item: Item
@@ -31,7 +32,7 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear }:
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-3xl text-[#b1aa9e]">◇</div>
+          <div className="flex h-full items-center justify-center text-[#9d9488]"><CoatHanger size={34} aria-label="Нет фото" /></div>
         )}
 
         <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-8rem)] truncate rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#4d4941] shadow-sm backdrop-blur">
@@ -44,21 +45,21 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear }:
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sm text-[#8c4a43] shadow-sm backdrop-blur transition active:scale-95"
             aria-label={item.is_favorite ? 'Убрать из избранного' : 'Добавить в избранное'}
           >
-            {item.is_favorite ? '♥' : '♡'}
+            <Heart size={17} weight={item.is_favorite ? 'fill' : 'regular'} aria-hidden />
           </button>
           <button
             onClick={() => onEdit(item)}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sm text-[#454139] shadow-sm backdrop-blur transition active:scale-95"
             aria-label="Редактировать вещь"
           >
-            ✎
+            <PencilSimple size={17} aria-hidden />
           </button>
           <button
             onClick={handleDelete}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sm text-[#8c4a43] shadow-sm backdrop-blur transition active:scale-95"
             aria-label="Удалить вещь"
           >
-            ×
+            <X size={17} aria-hidden />
           </button>
         </div>
       </div>

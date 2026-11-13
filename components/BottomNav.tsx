@@ -2,30 +2,33 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { CalendarBlank, CoatHanger, Sparkle, Stack } from '@phosphor-icons/react'
 
 const links = [
-  { href: '/', label: 'Гардероб' },
-  { href: '/recommend', label: 'Подбор' },
-  { href: '/outfits', label: 'Образы' },
-  { href: '/today', label: 'Сегодня' },
+  { href: '/', label: 'Гардероб', icon: CoatHanger },
+  { href: '/recommend', label: 'Подбор', icon: Sparkle },
+  { href: '/outfits', label: 'Образы', icon: Stack },
+  { href: '/today', label: 'Сегодня', icon: CalendarBlank },
 ]
 
 export default function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#ded8cd] bg-[#faf8f4]/95 px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-2 backdrop-blur">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dfd4c4] bg-[#fffaf2]/95 px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
       <div className="mx-auto grid max-w-lg grid-cols-4 gap-1">
         {links.map((link) => {
           const active = pathname === link.href
+          const Icon = link.icon
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`rounded-xl px-1 py-2.5 text-center text-xs font-medium transition ${
-                active ? 'bg-[#26372f] text-white' : 'text-[#817b70]'
+              className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-center text-[10px] font-semibold transition ${
+                active ? 'bg-[#1f422f] text-white' : 'text-[#81786d]'
               }`}
             >
+              <Icon size={21} weight={active ? 'fill' : 'regular'} aria-hidden />
               {link.label}
             </Link>
           )

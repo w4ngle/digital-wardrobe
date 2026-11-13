@@ -1,28 +1,37 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0F1115;
-  --color-surface: #171A21;
-  --color-surface-2: #1F242D;
-  --color-line: #2A303B;
-  --color-fg: #F2EFE9;
-  --color-muted: #9AA1AE;
-  --color-accent: #E2703A;
-  --color-ai: #8B7CF6;
-  --color-ok: #4CC38A;
-  --color-danger: #E5484D;
+  --color-bg: #f6f0e6;
+  --color-surface: #fffaf2;
+  --color-surface-2: #eee5d8;
+  --color-line: #dfd4c4;
+  --color-fg: #1e3026;
+  --color-muted: #81786d;
+  --color-accent: #6f1820;
+  --color-ai: #1f422f;
+  --color-ok: #4f705d;
+  --color-danger: #8d3438;
 
   --radius-card: 16px;
   --radius-chip: 999px;
 
-  --font-sans: system-ui, -apple-system, sans-serif;
 }
 
 body {
   min-height: 100dvh;
-  background: var(--tg-theme-bg-color, var(--color-bg));
-  color: var(--tg-theme-text-color, var(--color-fg));
-  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+::selection {
+  background: #d8c2ad;
+  color: #1e3026;
 }
 
 button,
@@ -31,4 +40,13 @@ select,
 input,
 textarea {
   -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #6f1820;
+  outline-offset: 2px;
 }
