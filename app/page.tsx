@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getItems, createItem, deleteItem, updateItem } from '@/lib/api'
+import { getItems, createItem, deleteItem, updateItem, markItemWorn } from '@/lib/api'
 import { Item } from '@/lib/supabase'
 import ItemCard from '@/components/ItemCard'
 import ItemForm from '@/components/ItemForm'
@@ -63,6 +63,16 @@ export default function Home() {
     setFilterCategory('')
     setFilterSeason('')
     setFilterStyle('')
+  }
+
+  const handleFavorite = async (item: Item) => {
+    const updated = await updateItem(item.id, { is_favorite: !item.is_favorite })
+    setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
+  }
+
+  const handleWear = async (item: Item) => {
+    const updated = await markItemWorn(item.id)
+    setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
   }
 
   const filteredItems = items.filter(item => {
@@ -142,6 +152,8 @@ export default function Home() {
                 item={item}
                 onDelete={handleDeleteItem}
                 onEdit={(item) => setEditingItem(item)}
+                onFavorite={handleFavorite}
+                onWear={handleWear}
               />
             ))}
           </div>

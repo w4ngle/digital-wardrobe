@@ -40,6 +40,10 @@ export function deleteItem(id: string) {
   return api<void>(`/api/items/${id}`, { method: 'DELETE' })
 }
 
+export function markItemWorn(id: string) {
+  return api<Item>(`/api/items/${id}/wear`, { method: 'POST' })
+}
+
 export function getOutfits() {
   return api<OutfitWithItems[]>('/api/outfits')
 }
@@ -54,4 +58,12 @@ export function createOutfit(outfit: Omit<Outfit, 'id' | 'created_at'>, itemIds:
 
 export function deleteOutfit(id: string) {
   return api<void>(`/api/outfits/${id}`, { method: 'DELETE' })
+}
+
+export function updateOutfit(id: string, updates: Pick<Partial<Outfit>, 'is_favorite' | 'planned_for'>) {
+  return api<Outfit>(`/api/outfits/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  })
 }

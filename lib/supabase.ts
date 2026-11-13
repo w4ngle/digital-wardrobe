@@ -10,6 +10,9 @@ export type Item = {
   formality?: number | null
   ai_meta?: Record<string, unknown> | null
   embedding?: number[] | null
+  is_favorite?: boolean
+  wear_count?: number
+  last_worn_at?: string | null
   created_at: string
 }
 
@@ -22,6 +25,8 @@ export type Outfit = {
   prompt?: string | null
   reasoning?: string | null
   render_url?: string | null
+  is_favorite?: boolean
+  planned_for?: string | null
   created_at: string
 }
 

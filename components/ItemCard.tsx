@@ -6,9 +6,11 @@ type ItemCardProps = {
   item: Item
   onDelete: (id: string) => Promise<void>
   onEdit: (item: Item) => void
+  onFavorite: (item: Item) => Promise<void>
+  onWear: (item: Item) => Promise<void>
 }
 
-export default function ItemCard({ item, onDelete, onEdit }: ItemCardProps) {
+export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear }: ItemCardProps) {
   const handleDelete = async () => {
     if (!confirm('Удалить эту вещь?')) return
     try {
@@ -32,11 +34,18 @@ export default function ItemCard({ item, onDelete, onEdit }: ItemCardProps) {
           <div className="flex h-full items-center justify-center text-3xl text-[#b1aa9e]">◇</div>
         )}
 
-        <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-5.75rem)] truncate rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#4d4941] shadow-sm backdrop-blur">
+        <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-8rem)] truncate rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#4d4941] shadow-sm backdrop-blur">
           {item.category}
         </span>
 
         <div className="absolute right-2.5 top-2.5 flex gap-1.5">
+          <button
+            onClick={() => onFavorite(item)}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sm text-[#8c4a43] shadow-sm backdrop-blur transition active:scale-95"
+            aria-label={item.is_favorite ? 'Убрать из избранного' : 'Добавить в избранное'}
+          >
+            {item.is_favorite ? '♥' : '♡'}
+          </button>
           <button
             onClick={() => onEdit(item)}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sm text-[#454139] shadow-sm backdrop-blur transition active:scale-95"
@@ -62,6 +71,9 @@ export default function ItemCard({ item, onDelete, onEdit }: ItemCardProps) {
           <span className="rounded-full bg-[#eee9df] px-2 py-1 text-[10px] text-[#746e64]">{item.color}</span>
           <span className="rounded-full bg-[#e5ece7] px-2 py-1 text-[10px] text-[#52635a]">{item.season}</span>
         </div>
+        <button onClick={() => onWear(item)} className="mt-3 w-full rounded-xl bg-[#eee9df] px-2 py-2 text-xs font-medium text-[#52635a] active:scale-[0.98]">
+          Надел сегодня{item.wear_count ? ` · ${item.wear_count}` : ''}
+        </button>
       </div>
     </article>
   )

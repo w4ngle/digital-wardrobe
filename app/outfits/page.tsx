@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createOutfit, deleteOutfit, getItems, getOutfits } from '@/lib/api'
+import { createOutfit, deleteOutfit, getItems, getOutfits, updateOutfit } from '@/lib/api'
 import { Item, OutfitWithItems } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
 
@@ -61,6 +61,16 @@ export default function OutfitsPage() {
     setOutfits((current) => current.filter((outfit) => outfit.id !== id))
   }
 
+  async function handleFavorite(outfit: OutfitWithItems) {
+    const updated = await updateOutfit(outfit.id, { is_favorite: !outfit.is_favorite })
+    setOutfits((current) => current.map((candidate) => candidate.id === outfit.id ? { ...candidate, ...updated } : candidate))
+  }
+
+  async function handlePlan(outfit: OutfitWithItems, planned_for: string) {
+    const updated = await updateOutfit(outfit.id, { planned_for: planned_for || null })
+    setOutfits((current) => current.map((candidate) => candidate.id === outfit.id ? { ...candidate, ...updated } : candidate))
+  }
+
   return (
     <main className="min-h-screen bg-[#f4f1eb] text-[#201f1c]">
       <div className="mx-auto max-w-5xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
@@ -118,9 +128,16 @@ export default function OutfitsPage() {
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><h2 className="truncate font-semibold">{outfit.name}</h2><p className="mt-1 truncate text-xs text-[#817b70]">{outfit.occasion || `${outfit.items.length} вещи`}</p></div>
-                    <button onClick={() => handleDelete(outfit.id)} className="shrink-0 text-lg text-[#9b6b65]" aria-label="Удалить образ">×</button>
+                    <div className="flex shrink-0 gap-2">
+                      <button onClick={() => handleFavorite(outfit)} className="text-lg text-[#9b6b65]" aria-label={outfit.is_favorite ? 'Убрать из избранного' : 'Добавить в избранное'}>{outfit.is_favorite ? '♥' : '♡'}</button>
+                      <button onClick={() => handleDelete(outfit.id)} className="text-lg text-[#9b6b65]" aria-label="Удалить образ">×</button>
+                    </div>
                   </div>
                   {outfit.notes && <p className="mt-3 line-clamp-2 text-xs leading-5 text-[#746e64]">{outfit.notes}</p>}
+                  <label className="mt-3 block text-[10px] font-semibold uppercase tracking-wide text-[#817b70]">
+                    Запланировать
+                    <input type="date" value={outfit.planned_for || ''} onChange={(event) => handlePlan(outfit, event.target.value)} className="mt-1 w-full rounded-lg border border-[#ddd7cc] bg-white px-2 py-2 text-xs font-normal normal-case tracking-normal" />
+                  </label>
                 </div>
               </article>
             ))}
