@@ -1,12 +1,17 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import BottomNav from "@/components/BottomNav";
+import TelegramApp from "@/components/TelegramApp";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin", "cyrillic"] });
-
 export const metadata: Metadata = {
-  title: "Цифровой гардероб",
+  title: "Мой гардероб",
   description: "Управляйте своим гардеробом и создавайте образы",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -16,7 +21,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={inter.className}>{children}</body>
+      <body>
+        {children}
+        <BottomNav />
+        <TelegramApp />
+      </body>
     </html>
   );
 }

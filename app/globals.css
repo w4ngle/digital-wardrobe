@@ -19,7 +19,16 @@
 }
 
 body {
-  background: var(--color-bg);
-  color: var(--color-fg);
+  min-height: 100dvh;
+  background: var(--tg-theme-bg-color, var(--color-bg));
+  color: var(--tg-theme-text-color, var(--color-fg));
   font-family: var(--font-sans);
+}
+
+button,
+a,
+select,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
 }

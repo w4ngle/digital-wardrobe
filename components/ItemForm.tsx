@@ -14,7 +14,7 @@ type ItemFormProps = {
     warmth: number
     formality: number
     photo_url: string | null
-    ai_meta: Record<string, any> | null
+    ai_meta: Record<string, unknown> | null
   }) => Promise<void>
   onCancel?: () => void
 }
@@ -30,9 +30,6 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [analyzing, setAnalyzing] = useState(false)
-  const [aiMeta, setAiMeta] = useState<Record<string, any> | null>(null)
-  const [lowConfidenceFields, setLowConfidenceFields] = useState<string[]>([])
 
   // Сжатие изображения на клиенте
   const compressImage = (file: File): Promise<string> => {
@@ -81,38 +78,8 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         const compressedDataUrl = await compressImage(file)
         setPhotoPreview(compressedDataUrl)
 
-        setAnalyzing(true)
-        const response = await fetch('/api/analyze-photo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: compressedDataUrl })
-        })
-
-        if (response.ok) {
-          const result = await response.json()
-          const confidence = result.confidence || 1
-          const meta = result._meta || {}
-
-          setCategory(result.category || '')
-          setColor(result.color || '')
-          setSeason(result.season || '')
-          setStyle(result.style || '')
-          setDescription(result.description || '')
-          setWarmth(result.warmth || 3)
-          setFormality(result.formality || 3)
-          setAiMeta({ ...meta, confidence, prompt_version: 'v2' })
-
-          // Помечаем поля с низкой уверенностью
-          const lowConf: string[] = []
-          if (confidence < 0.6) {
-            lowConf.push('category', 'color', 'season')
-          }
-          setLowConfidenceFields(lowConf)
-        }
       } catch (error) {
-        console.error('Ошибка анализа фото:', error)
-      } finally {
-        setAnalyzing(false)
+        console.error('Ошибка обработки фото:', error)
       }
     }
   }
@@ -134,7 +101,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         warmth,
         formality,
         photo_url: photoUrl,
-        ai_meta: aiMeta,
+        ai_meta: null,
       })
       // Сброс формы
       setCategory('')
@@ -146,8 +113,6 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       setFormality(3)
       setPhotoFile(null)
       setPhotoPreview(null)
-      setAiMeta(null)
-      setLowConfidenceFields([])
     } catch (error) {
       console.error('Ошибка при добавлении вещи:', error)
       alert('Не удалось добавить вещь')
@@ -155,8 +120,6 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       setLoading(false)
     }
   }
-
-  const isLowConfidence = (field: string) => lowConfidenceFields.includes(field)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 bg-slate-800 p-6 rounded-lg border border-slate-700">
@@ -180,25 +143,17 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
             />
           </div>
         )}
-        {analyzing && (
-          <p className="mt-2 text-sm text-cyan-400">🔍 Анализирую фото...</p>
-        )}
-        {aiMeta && (
-          <p className="mt-2 text-xs text-purple-400">✦ Заполнено ИИ</p>
-        )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-slate-300 mb-2">
-          Категория {isLowConfidence('category') && <span className="text-orange-400">⚠ проверьте</span>}
+          Категория
         </label>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           required
-          className={`w-full bg-slate-900 border rounded px-3 py-2 text-slate-100 ${
-            isLowConfidence('category') ? 'border-orange-400' : 'border-slate-700'
-          }`}
+          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
         >
           <option value="">Выберите категорию</option>
           {CATEGORIES.map((cat) => (
@@ -211,7 +166,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
 
       <div>
         <label className="block text-sm font-medium text-slate-300 mb-2">
-          Цвет {isLowConfidence('color') && <span className="text-orange-400">⚠ проверьте</span>}
+          Цвет
         </label>
         <input
           type="text"
@@ -219,23 +174,19 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
           onChange={(e) => setColor(e.target.value)}
           required
           placeholder="Например: чёрный, синий"
-          className={`w-full bg-slate-900 border rounded px-3 py-2 text-slate-100 placeholder-slate-500 ${
-            isLowConfidence('color') ? 'border-orange-400' : 'border-slate-700'
-          }`}
+          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100 placeholder-slate-500"
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-slate-300 mb-2">
-          Сезон {isLowConfidence('season') && <span className="text-orange-400">⚠ проверьте</span>}
+          Сезон
         </label>
         <select
           value={season}
           onChange={(e) => setSeason(e.target.value)}
           required
-          className={`w-full bg-slate-900 border rounded px-3 py-2 text-slate-100 ${
-            isLowConfidence('season') ? 'border-orange-400' : 'border-slate-700'
-          }`}
+          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-100"
         >
           <option value="">Выберите сезон</option>
           {SEASONS.map((s) => (
@@ -313,10 +264,10 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       <div className="flex gap-3 pt-2">
         <button
           type="submit"
-          disabled={loading || analyzing}
+          disabled={loading}
           className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-700 text-white font-medium py-2 px-4 rounded transition"
         >
-          {loading ? 'Добавление...' : analyzing ? 'Анализ...' : 'Добавить вещь'}
+          {loading ? 'Добавление...' : 'Добавить вещь'}
         </button>
         {onCancel && (
           <button

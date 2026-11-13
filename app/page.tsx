@@ -1,14 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getItems, createItem, deleteItem, createOutfit, updateItem } from '@/lib/api'
+import { getItems, createItem, deleteItem, updateItem } from '@/lib/api'
 import { Item } from '@/lib/supabase'
 import ItemCard from '@/components/ItemCard'
 import ItemForm from '@/components/ItemForm'
 import ItemFilters from '@/components/ItemFilters'
-import RecommendationModal from '@/components/RecommendationModal'
 import EditItemModal from '@/components/EditItemModal'
-import { recommendOutfit } from '@/lib/recommendations'
 
 export default function Home() {
   const [items, setItems] = useState<Item[]>([])
@@ -17,27 +15,17 @@ export default function Home() {
   const [filterCategory, setFilterCategory] = useState('')
   const [filterSeason, setFilterSeason] = useState('')
   const [filterStyle, setFilterStyle] = useState('')
-  const [recommendation, setRecommendation] = useState<{
-    items: Item[]
-    reason: string
-  } | null>(null)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
 
   useEffect(() => {
-    loadItems()
+    getItems()
+      .then(setItems)
+      .catch((error) => {
+        console.error('Ошибка загрузки вещей:', error)
+        alert('Не удалось загрузить гардероб')
+      })
+      .finally(() => setLoading(false))
   }, [])
-
-  const loadItems = async () => {
-    try {
-      const data = await getItems()
-      setItems(data)
-    } catch (error) {
-      console.error('Ошибка загрузки вещей:', error)
-      alert('Не удалось загрузить гардероб')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleCreateItem = async (itemData: {
     category: string
@@ -48,7 +36,7 @@ export default function Home() {
     warmth: number
     formality: number
     photo_url: string | null
-    ai_meta: Record<string, any> | null
+    ai_meta: Record<string, unknown> | null
   }) => {
     const newItem = await createItem(itemData)
     setItems([newItem, ...items])
@@ -77,42 +65,6 @@ export default function Home() {
     setFilterStyle('')
   }
 
-  const handleRecommend = () => {
-    if (!filterSeason || !filterStyle) {
-      alert('Выберите сезон и стиль для подбора образа')
-      return
-    }
-
-    const result = recommendOutfit(items, filterSeason, filterStyle)
-
-    if (!result) {
-      alert('Не найдено подходящих вещей для образа')
-      return
-    }
-
-    setRecommendation(result)
-  }
-
-  const handleSaveRecommendation = async () => {
-    if (!recommendation) return
-
-    try {
-      await createOutfit(
-        {
-          name: recommendation.reason,
-          occasion: null,
-          notes: null
-        },
-        recommendation.items.map(item => item.id)
-      )
-      alert('Образ сохранён!')
-      setRecommendation(null)
-    } catch (error) {
-      console.error('Ошибка сохранения образа:', error)
-      alert('Не удалось сохранить образ')
-    }
-  }
-
   const filteredItems = items.filter(item => {
     if (filterCategory && item.category !== filterCategory) return false
     if (filterSeason && item.season !== filterSeason) return false
@@ -122,7 +74,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 pb-28 pt-[max(24px,env(safe-area-inset-top))]">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-slate-100 mb-2">
             Цифровой гардероб
@@ -132,23 +84,15 @@ export default function Home() {
           </p>
         </header>
 
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            {!showForm ? (
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-3 px-6 rounded-lg transition"
-              >
-                + Добавить вещь
-              </button>
-            ) : null}
-          </div>
-          <a
-            href="/outfits"
-            className="bg-slate-800 hover:bg-slate-700 text-white font-medium py-3 px-6 rounded-lg transition"
-          >
-            Образы
-          </a>
+        <div className="mb-6">
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="w-full rounded-xl bg-accent px-6 py-3 font-medium text-white transition sm:w-auto"
+            >
+              + Добавить вещь
+            </button>
+          )}
         </div>
 
         {showForm && (
@@ -170,17 +114,6 @@ export default function Home() {
           onReset={handleResetFilters}
         />
 
-        {filterSeason && filterStyle && (
-          <div className="mb-6">
-            <button
-              onClick={handleRecommend}
-              className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-3 px-4 rounded-lg transition"
-            >
-              🎯 Подобрать образ
-            </button>
-          </div>
-        )}
-
         {loading ? (
           <div className="text-center py-12 text-slate-400">
             Загрузка...
@@ -195,7 +128,7 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
             {filteredItems.map((item) => (
               <ItemCard
                 key={item.id}
@@ -211,15 +144,6 @@ export default function Home() {
           Показано: {filteredItems.length} из {items.length}
         </div>
       </div>
-
-      {recommendation && (
-        <RecommendationModal
-          items={recommendation.items}
-          reason={recommendation.reason}
-          onClose={() => setRecommendation(null)}
-          onSave={handleSaveRecommendation}
-        />
-      )}
 
       {editingItem && (
         <EditItemModal

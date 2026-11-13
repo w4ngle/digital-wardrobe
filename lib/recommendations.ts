@@ -1,42 +1,131 @@
 import { Item } from './supabase'
 
-type OutfitRecommendation = {
-  items: Item[]
-  reason: string
+export const OCCASIONS = ['На каждый день', 'Прогулка', 'Работа', 'Ресторан'] as const
+export const WEATHER = ['Тепло', 'Прохладно', 'Холодно'] as const
+
+export type Occasion = typeof OCCASIONS[number]
+export type Weather = typeof WEATHER[number]
+
+export type OutfitRequest = {
+  occasion: Occasion
+  weather: Weather
+  style: string
 }
 
-export function recommendOutfit(
-  items: Item[],
-  season: string,
-  style: string
-): OutfitRecommendation | null {
-  const filtered = items.filter(
-    item =>
-      (item.season === season || item.season === 'Всесезонное') &&
-      (item.style === style || item.style === 'Повседневный')
-  )
+export type OutfitRecommendation = {
+  items: Item[]
+  reason: string
+  score: number
+}
 
-  const tops = filtered.filter(i => i.category === 'Верх')
-  const bottoms = filtered.filter(i => i.category === 'Низ')
-  const shoes = filtered.filter(i => i.category === 'Обувь')
-  const outerwear = filtered.filter(i => i.category === 'Верхняя одежда')
+const targetWarmth: Record<Weather, number> = { Тепло: 1, Прохладно: 3, Холодно: 5 }
+const targetFormality: Record<Occasion, number> = {
+  'На каждый день': 2,
+  Прогулка: 1,
+  Работа: 4,
+  Ресторан: 4,
+}
+const neutralColors = ['бел', 'черн', 'сер', 'беж', 'корич', 'молоч', 'джинс', 'темно-син']
+const colorPairs = [['син', 'беж'], ['голуб', 'корич'], ['зелен', 'беж'], ['бордов', 'сер'], ['красн', 'черн']]
 
-  const outfit: Item[] = []
+function includesColor(color: string, samples: string[]) {
+  const normalized = color.toLowerCase().replace('ё', 'е')
+  return samples.some((sample) => normalized.includes(sample))
+}
 
-  if (tops.length > 0) outfit.push(tops[Math.floor(Math.random() * tops.length)])
-  if (bottoms.length > 0) outfit.push(bottoms[Math.floor(Math.random() * bottoms.length)])
-  if (shoes.length > 0) outfit.push(shoes[Math.floor(Math.random() * shoes.length)])
+function colorScore(first: string, second: string) {
+  const a = first.toLowerCase()
+  const b = second.toLowerCase()
+  if (a === b) return 1
+  if (includesColor(a, neutralColors) || includesColor(b, neutralColors)) return 2
+  return colorPairs.some(([left, right]) =>
+    (a.includes(left) && b.includes(right)) || (a.includes(right) && b.includes(left))
+  ) ? 2 : 0
+}
 
-  if (season === 'Зима' && outerwear.length > 0) {
-    outfit.push(outerwear[Math.floor(Math.random() * outerwear.length)])
+function inferredWarmth(item: Item) {
+  if (item.warmth) return item.warmth
+  if (item.season === 'Лето') return 1
+  if (item.season === 'Зима') return 5
+  return 3
+}
+
+function inferredFormality(item: Item) {
+  if (item.formality) return item.formality
+  if (item.style === 'Деловой' || item.style === 'Нарядный') return 4
+  if (item.style === 'Спортивный') return 1
+  return 2
+}
+
+function itemScore(item: Item, request: OutfitRequest) {
+  const style = item.style === request.style ? 4 : item.style === 'Повседневный' ? 1 : 0
+  const warmth = 3 - Math.abs(inferredWarmth(item) - targetWarmth[request.weather])
+  const formality = 3 - Math.abs(inferredFormality(item) - targetFormality[request.occasion])
+  return style + warmth + formality
+}
+
+function buildReason(request: OutfitRequest, hasOuterwear: boolean) {
+  const layer = hasOuterwear ? ' Добавлен верхний слой для комфорта.' : ''
+  return `${request.style} образ для повода «${request.occasion.toLowerCase()}» и погоды «${request.weather.toLowerCase()}». Цвета и уровень формальности сочетаются.${layer}`
+}
+
+export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 3): OutfitRecommendation[] {
+  const byCategory = (category: string) => items
+    .filter((item) => item.category === category)
+    .sort((a, b) => itemScore(b, request) - itemScore(a, request))
+    .slice(0, 8)
+
+  const tops = byCategory('Верх')
+  const bottoms = byCategory('Низ')
+  const shoes: Array<Item | null> = byCategory('Обувь')
+  if (shoes.length === 0) shoes.push(null)
+
+  const outerwearItems = byCategory('Верхняя одежда')
+  const outerwear: Array<Item | null> = request.weather === 'Тепло'
+    ? [null]
+    : outerwearItems.length > 0 ? outerwearItems : [null]
+  const candidates: OutfitRecommendation[] = []
+
+  for (const top of tops) {
+    for (const bottom of bottoms) {
+      for (const shoe of shoes) {
+        for (const layer of outerwear) {
+          const outfit = [top, bottom, shoe, layer].filter((item): item is Item => item !== null)
+          const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request), 0)
+          const colors = colorScore(top.color, bottom.color) + (shoe ? colorScore(bottom.color, shoe.color) : 0)
+          const coldLayerPenalty = request.weather === 'Холодно' && !layer ? -5 : 0
+          candidates.push({
+            items: outfit,
+            score: itemTotal + colors + coldLayerPenalty,
+            reason: buildReason(request, Boolean(layer)),
+          })
+        }
+      }
+    }
   }
 
-  if (outfit.length < 2) {
-    return null
+  if (candidates.length === 0) {
+    const fallback = [...items]
+      .sort((a, b) => itemScore(b, request) - itemScore(a, request))
+      .filter((item, index, sorted) => sorted.findIndex((candidate) => candidate.category === item.category) === index)
+      .slice(0, 4)
+    return fallback.length >= 2 ? [{
+      items: fallback,
+      score: fallback.reduce((sum, item) => sum + itemScore(item, request), 0),
+      reason: buildReason(request, fallback.some((item) => item.category === 'Верхняя одежда')),
+    }] : []
   }
 
-  return {
-    items: outfit,
-    reason: `Образ в стиле "${style}" для сезона "${season}"`
-  }
+  return candidates
+    .sort((a, b) => b.score - a.score)
+    .filter((candidate, index, sorted) => {
+      const key = candidate.items.map((item) => item.id).sort().join(':')
+      return sorted.findIndex((other) => other.items.map((item) => item.id).sort().join(':') === key) === index
+    })
+    .slice(0, limit)
+}
+
+export function recommendOutfit(items: Item[], season: string, style: string) {
+  const weather: Weather = season === 'Зима' ? 'Холодно' : season === 'Лето' ? 'Тепло' : 'Прохладно'
+  return recommendOutfits(items, { occasion: 'На каждый день', weather, style }, 1)[0] ?? null
 }

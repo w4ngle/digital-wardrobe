@@ -67,24 +67,16 @@ export default function OutfitsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E14] text-[#F8FAFC] p-8">
+    <div className="min-h-screen bg-[#0B0E14] px-4 pb-28 pt-[max(24px,env(safe-area-inset-top))] text-[#F8FAFC]">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8 flex items-center justify-between gap-3">
           <h1 className="text-3xl font-bold">Образы</h1>
-          <div className="flex gap-4">
-            <a
-              href="/"
-              className="px-4 py-2 bg-[#1E293B] rounded-lg hover:bg-[#334155] transition"
-            >
-              Вещи
-            </a>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="px-4 py-2 bg-[#F97316] rounded-lg hover:bg-[#EA580C] transition"
-            >
-              {showForm ? 'Отмена' : 'Создать образ'}
-            </button>
-          </div>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="rounded-xl bg-[#F97316] px-4 py-2 transition hover:bg-[#EA580C]"
+          >
+            {showForm ? 'Отмена' : 'Создать'}
+          </button>
         </div>
 
         {showForm && (
@@ -115,7 +107,7 @@ export default function OutfitsPage() {
 
               <div>
                 <h3 className="text-lg font-semibold mb-3">Выберите вещи</h3>
-                <div className="grid grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                <div className="grid max-h-96 grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3">
                   {allItems.map(item => (
                     <div
                       key={item.id}
@@ -172,7 +164,7 @@ export default function OutfitsPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
                 {outfit.items.map(item => (
                   <div key={item.id} className="bg-[#0F172A] rounded-lg p-3 border border-[#334155]">
                     {item.photo_url && (

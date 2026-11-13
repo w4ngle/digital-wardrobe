@@ -15,7 +15,7 @@ export type Item = {
   description?: string | null
   warmth?: number | null
   formality?: number | null
-  ai_meta?: Record<string, any> | null
+  ai_meta?: Record<string, unknown> | null
   embedding?: number[] | null
   created_at: string
 }

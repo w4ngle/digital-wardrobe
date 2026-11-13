@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest'
+import { Item } from './supabase'
+import { recommendOutfits } from './recommendations'
+
+const item = (id: string, category: string, color: string, style = 'Повседневный', warmth = 3): Item => ({
+  id, category, color, style, warmth,
+  formality: style === 'Деловой' ? 4 : 2,
+  season: warmth >= 4 ? 'Зима' : warmth <= 2 ? 'Лето' : 'Демисезон',
+  photo_url: null,
+  created_at: '2026-01-01T00:00:00Z',
+})
+
+describe('recommendOutfits', () => {
+  it('prefers matching style', () => {
+    const [result] = recommendOutfits([
+      item('top-casual', 'Верх', 'белый'),
+      item('top-sport', 'Верх', 'красный', 'Спортивный'),
+      item('bottom', 'Низ', 'синий'),
+      item('shoes', 'Обувь', 'белый'),
+    ], { occasion: 'На каждый день', weather: 'Прохладно', style: 'Повседневный' })
+
+    expect(result.items.map((candidate) => candidate.id)).toContain('top-casual')
+  })
+
+  it('adds outerwear for cold weather', () => {
+    const [result] = recommendOutfits([
+      item('top', 'Верх', 'белый', 'Повседневный', 4),
+      item('bottom', 'Низ', 'черный', 'Повседневный', 4),
+      item('coat', 'Верхняя одежда', 'серый', 'Повседневный', 5),
+    ], { occasion: 'Прогулка', weather: 'Холодно', style: 'Повседневный' })
+
+    expect(result.items.map((candidate) => candidate.id)).toContain('coat')
+  })
+
+  it('returns a fallback for a small wardrobe', () => {
+    const results = recommendOutfits([
+      item('top', 'Верх', 'белый'),
+      item('shoes', 'Обувь', 'черный'),
+    ], { occasion: 'На каждый день', weather: 'Тепло', style: 'Повседневный' })
+
+    expect(results[0].items).toHaveLength(2)
+  })
+})
