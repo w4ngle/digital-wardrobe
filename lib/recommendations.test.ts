@@ -40,4 +40,15 @@ describe('recommendOutfits', () => {
 
     expect(results[0].items).toHaveLength(2)
   })
+
+  it('adds the best matching accessory when available', () => {
+    const [result] = recommendOutfits([
+      item('top', 'Верх', 'белый'),
+      item('bottom', 'Низ', 'черный'),
+      item('shoes', 'Обувь', 'белый'),
+      item('cap', 'Аксессуар', 'зеленый'),
+    ], { occasion: 'Прогулка', weather: 'Тепло', style: 'Повседневный' })
+
+    expect(result.items.map((candidate) => candidate.id)).toContain('cap')
+  })
 })

@@ -3,32 +3,15 @@
 import { useEffect, useState } from 'react'
 import { createOutfit, getItems } from '@/lib/api'
 import { Item } from '@/lib/supabase'
-import {
-  OCCASIONS,
-  WEATHER,
-  Occasion,
-  OutfitRecommendation,
-  Weather,
-  recommendOutfits,
-} from '@/lib/recommendations'
+import { OCCASIONS, WEATHER, Occasion, OutfitRecommendation, Weather, recommendOutfits } from '@/lib/recommendations'
 import { STYLES } from '@/lib/taxonomy'
+import OutfitCollage from '@/components/OutfitCollage'
 
-function Choice<T extends string>({ values, value, onChange }: {
-  values: readonly T[]
-  value: T
-  onChange: (value: T) => void
-}) {
+function Choice<T extends string>({ values, value, onChange }: { values: readonly T[], value: T, onChange: (value: T) => void }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
       {values.map((option) => (
-        <button
-          type="button"
-          key={option}
-          onClick={() => onChange(option)}
-          className={`rounded-full border px-4 py-2 text-sm transition ${
-            value === option ? 'border-accent bg-accent text-white' : 'border-line bg-surface text-muted'
-          }`}
-        >
+        <button type="button" key={option} onClick={() => onChange(option)} className={`shrink-0 rounded-full px-4 py-2 text-xs font-medium transition ${value === option ? 'bg-[#26372f] text-white' : 'border border-[#ddd7cc] bg-white text-[#686258]'}`}>
           {option}
         </button>
       ))}
@@ -46,24 +29,17 @@ export default function RecommendPage() {
   const [saved, setSaved] = useState<number | null>(null)
 
   useEffect(() => {
-    getItems()
-      .then(setItems)
-      .catch(() => alert('Не удалось загрузить гардероб'))
-      .finally(() => setLoading(false))
+    getItems().then(setItems).catch(() => alert('Не удалось загрузить гардероб')).finally(() => setLoading(false))
   }, [])
 
-  const handleRecommend = () => {
+  function handleRecommend() {
     setSaved(null)
     setResults(recommendOutfits(items, { occasion, weather, style }))
   }
 
-  const handleSave = async (result: OutfitRecommendation, index: number) => {
+  async function handleSave(result: OutfitRecommendation, index: number) {
     try {
-      await createOutfit({
-        name: `${occasion} · ${style}`,
-        occasion,
-        notes: result.reason,
-      }, result.items.map((item) => item.id))
+      await createOutfit({ name: `${occasion} · ${style}`, occasion, notes: result.reason }, result.items.map((item) => item.id))
       setSaved(index)
     } catch {
       alert('Не удалось сохранить образ')
@@ -71,70 +47,43 @@ export default function RecommendPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-2xl px-4 pb-28 pt-[max(24px,env(safe-area-inset-top))]">
-      <header className="mb-6">
-        <p className="mb-1 text-sm text-muted">Подбор без ИИ</p>
-        <h1 className="text-3xl font-bold">Что надеть?</h1>
-      </header>
+    <main className="min-h-screen bg-[#f4f1eb] text-[#201f1c]">
+      <div className="mx-auto max-w-3xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
+        <header className="mb-7">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#817b70]">Бесплатно · без ИИ</p>
+          <h1 className="text-3xl font-semibold tracking-[-0.04em]">Что надеть?</h1>
+          <p className="mt-2 text-sm text-[#817b70]">Подберём сочетание по погоде, стилю и поводу</p>
+        </header>
 
-      <section className="space-y-6 rounded-card border border-line bg-surface p-4">
-        <div>
-          <h2 className="mb-3 font-medium">Куда</h2>
-          <Choice values={OCCASIONS} value={occasion} onChange={setOccasion} />
-        </div>
-        <div>
-          <h2 className="mb-3 font-medium">Погода</h2>
-          <Choice values={WEATHER} value={weather} onChange={setWeather} />
-        </div>
-        <div>
-          <h2 className="mb-3 font-medium">Стиль</h2>
-          <Choice values={STYLES} value={style} onChange={setStyle} />
-        </div>
-        <button
-          type="button"
-          disabled={loading || items.length < 2}
-          onClick={handleRecommend}
-          className="w-full rounded-xl bg-accent px-4 py-3.5 font-semibold text-white disabled:opacity-40"
-        >
-          {loading ? 'Загружаю гардероб…' : 'Подобрать образ'}
-        </button>
-        {!loading && items.length < 2 && (
-          <p className="text-center text-sm text-muted">Добавьте хотя бы две вещи в гардероб.</p>
+        <section className="space-y-5 rounded-[24px] bg-[#faf8f4] p-4 shadow-[0_8px_30px_rgba(41,37,31,0.06)] sm:p-6">
+          <div><h2 className="mb-3 text-sm font-semibold">Куда</h2><Choice values={OCCASIONS} value={occasion} onChange={setOccasion} /></div>
+          <div><h2 className="mb-3 text-sm font-semibold">Погода</h2><Choice values={WEATHER} value={weather} onChange={setWeather} /></div>
+          <div><h2 className="mb-3 text-sm font-semibold">Настроение</h2><Choice values={STYLES} value={style} onChange={setStyle} /></div>
+          <button type="button" disabled={loading || items.length < 2} onClick={handleRecommend} className="w-full rounded-xl bg-[#26372f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
+            {loading ? 'Загружаем гардероб…' : 'Показать варианты'}
+          </button>
+        </section>
+
+        {!results.length && !loading && (
+          <div className="mt-6 rounded-[20px] border border-[#ded8cd] px-5 py-8 text-center text-sm text-[#817b70]">
+            {items.length < 2 ? 'Добавьте хотя бы две вещи в гардероб' : 'Выберите параметры — мы предложим до трёх вариантов'}
+          </div>
         )}
-      </section>
 
-      {results.length === 0 && !loading && items.length >= 2 && (
-        <p className="mt-6 text-center text-sm text-muted">Выберите параметры и нажмите «Подобрать образ».</p>
-      )}
-
-      <div className="mt-6 space-y-5">
-        {results.map((result, index) => (
-          <article key={result.items.map((item) => item.id).join(':')} className="overflow-hidden rounded-card border border-line bg-surface">
-            <div className="grid grid-cols-2 gap-px bg-line">
-              {result.items.map((item) => (
-                <div key={item.id} className="bg-surface-2">
-                  {item.photo_url ? (
-                    <img src={item.photo_url} alt={`${item.category}, ${item.color}`} className="aspect-square w-full object-cover" />
-                  ) : (
-                    <div className="flex aspect-square items-center justify-center text-sm text-muted">{item.category}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="p-4">
-              <h2 className="font-semibold">Вариант {index + 1}</h2>
-              <p className="mt-1 text-sm leading-5 text-muted">{result.reason}</p>
-              <button
-                type="button"
-                onClick={() => handleSave(result, index)}
-                disabled={saved === index}
-                className="mt-4 w-full rounded-xl bg-surface-2 px-4 py-3 font-medium text-fg disabled:text-ok"
-              >
-                {saved === index ? 'Сохранено' : 'Сохранить образ'}
-              </button>
-            </div>
-          </article>
-        ))}
+        <div className="mt-7 grid gap-5 sm:grid-cols-2">
+          {results.map((result, index) => (
+            <article key={result.items.map((item) => item.id).join(':')} className="overflow-hidden rounded-[24px] bg-[#faf8f4] shadow-[0_8px_24px_rgba(41,37,31,0.07)]">
+              <OutfitCollage items={result.items} />
+              <div className="p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#65786d]">Вариант {index + 1}</p>
+                <p className="mt-2 text-sm leading-6 text-[#686258]">{result.reason}</p>
+                <button type="button" onClick={() => handleSave(result, index)} disabled={saved === index} className="mt-4 w-full rounded-xl bg-[#ece7dd] px-4 py-3 text-sm font-semibold text-[#3f4f46] disabled:bg-[#dfe9e2]">
+                  {saved === index ? '✓ Сохранено' : 'Сохранить образ'}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </main>
   )

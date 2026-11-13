@@ -84,13 +84,14 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
   const outerwear: Array<Item | null> = request.weather === 'Тепло'
     ? [null]
     : outerwearItems.length > 0 ? outerwearItems : [null]
+  const accessory = byCategory('Аксессуар')[0] ?? null
   const candidates: OutfitRecommendation[] = []
 
   for (const top of tops) {
     for (const bottom of bottoms) {
       for (const shoe of shoes) {
         for (const layer of outerwear) {
-          const outfit = [top, bottom, shoe, layer].filter((item): item is Item => item !== null)
+          const outfit = [top, bottom, shoe, layer, accessory].filter((item): item is Item => item !== null)
           const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request), 0)
           const colors = colorScore(top.color, bottom.color) + (shoe ? colorScore(bottom.color, shoe.color) : 0)
           const coldLayerPenalty = request.weather === 'Холодно' && !layer ? -5 : 0
