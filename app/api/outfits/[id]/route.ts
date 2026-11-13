@@ -6,6 +6,7 @@ import { z } from 'zod'
 const OutfitUpdate = z.object({
   is_favorite: z.boolean().optional(),
   planned_for: z.iso.date().nullable().optional(),
+  rating: z.union([z.literal(-1), z.literal(1)]).nullable().optional(),
 })
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

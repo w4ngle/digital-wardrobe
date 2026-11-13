@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Item } from './supabase'
-import { recommendOutfits } from './recommendations'
+import { buildPackingList, recommendOutfits, replaceOutfitItem } from './recommendations'
 
 const item = (id: string, category: string, color: string, style = 'Повседневный', warmth = 3): Item => ({
   id, category, color, style, warmth,
@@ -64,5 +64,38 @@ describe('recommendOutfits', () => {
 
     expect(results).toHaveLength(3)
     expect(new Set(results.flatMap((result) => result.items.map((candidate) => candidate.id))).size).toBeGreaterThan(3)
+  })
+
+  it('excludes unavailable items and learns from ratings', () => {
+    const unavailable = { ...item('top-best', 'Верх', 'белый'), availability: 'laundry' as const }
+    const [result] = recommendOutfits([
+      unavailable,
+      item('top-liked', 'Верх', 'серый'),
+      item('top-other', 'Верх', 'красный'),
+      item('bottom', 'Низ', 'черный'),
+    ], { occasion: 'На каждый день', weather: 'Прохладно', style: 'Повседневный' }, 1, { 'top-liked': 5 })
+
+    expect(result.items.map((candidate) => candidate.id)).toContain('top-liked')
+    expect(result.items.map((candidate) => candidate.id)).not.toContain('top-best')
+  })
+
+  it('replaces one item with another item from the same category', () => {
+    const wardrobe = [item('top-1', 'Верх', 'белый'), item('top-2', 'Верх', 'серый'), item('bottom', 'Низ', 'черный')]
+    const request = { occasion: 'На каждый день' as const, weather: 'Прохладно' as const, style: 'Повседневный' }
+    const result = recommendOutfits(wardrobe, request, 1)[0]
+    const replaced = replaceOutfitItem(wardrobe, result, 'top-1', request)
+
+    expect(replaced.items.map((candidate) => candidate.id)).toContain('top-2')
+  })
+
+  it('builds a unique packing list from compatible outfits', () => {
+    const packed = buildPackingList([
+      item('top-1', 'Верх', 'белый'), item('top-2', 'Верх', 'серый'),
+      item('bottom-1', 'Низ', 'черный'), item('bottom-2', 'Низ', 'синий'),
+      item('shoes', 'Обувь', 'белый'),
+    ], { occasion: 'На каждый день', weather: 'Тепло', style: 'Повседневный' }, 3)
+
+    expect(new Set(packed.map((candidate) => candidate.id)).size).toBe(packed.length)
+    expect(packed.length).toBeGreaterThanOrEqual(3)
   })
 })

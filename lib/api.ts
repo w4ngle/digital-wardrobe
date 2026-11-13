@@ -60,7 +60,7 @@ export function deleteOutfit(id: string) {
   return api<void>(`/api/outfits/${id}`, { method: 'DELETE' })
 }
 
-export function updateOutfit(id: string, updates: Pick<Partial<Outfit>, 'is_favorite' | 'planned_for'>) {
+export function updateOutfit(id: string, updates: Pick<Partial<Outfit>, 'is_favorite' | 'planned_for' | 'rating'>) {
   return api<Outfit>(`/api/outfits/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

@@ -18,6 +18,8 @@ export type OutfitRecommendation = {
   score: number
 }
 
+export type OutfitPreferences = Record<string, number>
+
 const targetWarmth: Record<Weather, number> = { Тепло: 1, Прохладно: 3, Холодно: 5 }
 const targetFormality: Record<Occasion, number> = {
   'На каждый день': 2,
@@ -66,11 +68,11 @@ function inferredFormality(item: Item) {
   return 2
 }
 
-function itemScore(item: Item, request: OutfitRequest) {
+function itemScore(item: Item, request: OutfitRequest, preferences: OutfitPreferences = {}) {
   const style = item.style === request.style ? 4 : item.style === 'Повседневный' ? 1 : 0
   const warmth = 3 - Math.abs(inferredWarmth(item) - targetWarmth[request.weather])
   const formality = 3 - Math.abs(inferredFormality(item) - targetFormality[request.occasion])
-  return style + warmth + formality
+  return style + warmth + formality + (preferences[item.id] || 0)
 }
 
 function buildReason(request: OutfitRequest, hasOuterwear: boolean) {
@@ -78,10 +80,11 @@ function buildReason(request: OutfitRequest, hasOuterwear: boolean) {
   return `${request.style} образ для повода «${request.occasion.toLowerCase()}» и погоды «${request.weather.toLowerCase()}». Цвета и уровень формальности сочетаются.${layer}`
 }
 
-export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 3): OutfitRecommendation[] {
-  const byCategory = (category: string) => items
+export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 3, preferences: OutfitPreferences = {}): OutfitRecommendation[] {
+  const availableItems = items.filter((item) => !item.availability || item.availability === 'available')
+  const byCategory = (category: string) => availableItems
     .filter((item) => item.category === category)
-    .sort((a, b) => itemScore(b, request) - itemScore(a, request))
+    .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))
     .slice(0, 8)
 
   const tops = byCategory('Верх')
@@ -102,7 +105,7 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
         for (const layer of outerwear) {
           for (const accessory of accessories) {
             const outfit = [top, bottom, shoe, layer, accessory].filter((item): item is Item => item !== null)
-            const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request), 0)
+            const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request, preferences), 0)
             const colors = colorScore(top.color, bottom.color) + (shoe ? colorScore(bottom.color, shoe.color) : 0)
             const coldLayerPenalty = request.weather === 'Холодно' && !layer ? -5 : 0
             candidates.push({
@@ -117,13 +120,13 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
   }
 
   if (candidates.length === 0) {
-    const fallback = [...items]
-      .sort((a, b) => itemScore(b, request) - itemScore(a, request))
+    const fallback = [...availableItems]
+      .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))
       .filter((item, index, sorted) => sorted.findIndex((candidate) => candidate.category === item.category) === index)
       .slice(0, 4)
     return fallback.length >= 2 ? [{
       items: fallback,
-      score: fallback.reduce((sum, item) => sum + itemScore(item, request), 0),
+      score: fallback.reduce((sum, item) => sum + itemScore(item, request, preferences), 0),
       reason: buildReason(request, fallback.some((item) => item.category === 'Верхняя одежда')),
     }] : []
   }
@@ -147,6 +150,23 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
   }
 
   return [...varied, ...unique.filter((candidate) => !varied.includes(candidate))].slice(0, limit)
+}
+
+export function replaceOutfitItem(items: Item[], result: OutfitRecommendation, itemId: string, request: OutfitRequest, preferences: OutfitPreferences = {}) {
+  const current = result.items.find((item) => item.id === itemId)
+  if (!current) return result
+  const used = new Set(result.items.map((item) => item.id))
+  const replacement = items
+    .filter((item) => item.category === current.category && !used.has(item.id) && (!item.availability || item.availability === 'available'))
+    .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))[0]
+  return replacement ? { ...result, items: result.items.map((item) => item.id === itemId ? replacement : item) } : result
+}
+
+export function buildPackingList(items: Item[], request: OutfitRequest, days: number) {
+  const outfits = recommendOutfits(items, request, Math.min(Math.max(days, 2), 6))
+  const packed = new Map<string, Item>()
+  outfits.forEach((outfit) => outfit.items.forEach((item) => packed.set(item.id, item)))
+  return [...packed.values()]
 }
 
 export function recommendOutfit(items: Item[], season: string, style: string) {

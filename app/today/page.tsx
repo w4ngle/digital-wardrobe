@@ -34,7 +34,7 @@ export default function TodayPage() {
   }, [])
 
   const favoriteItems = items.filter((item) => item.is_favorite)
-  const favoriteOutfits = outfits.filter((outfit) => outfit.is_favorite)
+  const favoriteOutfits = outfits.filter((outfit) => outfit.is_favorite || outfit.rating === 1)
   const planned = outfits.filter((outfit) => outfit.planned_for).sort((a, b) => a.planned_for!.localeCompare(b.planned_for!))
   const heroOutfit = planned[0] || favoriteOutfits[0] || outfits[0]
   const totalWears = items.reduce((sum, item) => sum + (item.wear_count || 0), 0)
@@ -43,6 +43,17 @@ export default function TodayPage() {
     result[item.category] = (result[item.category] || 0) + 1
     return result
   }, {}), [items])
+  const favoritePair = useMemo(() => {
+    const pairs = new Map<string, { items: Item[], count: number }>()
+    outfits.filter((outfit) => outfit.is_favorite || outfit.rating === 1).forEach((outfit) => {
+      for (let first = 0; first < outfit.items.length; first++) for (let second = first + 1; second < outfit.items.length; second++) {
+        const pair = [outfit.items[first], outfit.items[second]].sort((a, b) => a.id.localeCompare(b.id))
+        const key = pair.map((item) => item.id).join(':')
+        pairs.set(key, { items: pair, count: (pairs.get(key)?.count || 0) + 1 })
+      }
+    })
+    return [...pairs.values()].sort((a, b) => b.count - a.count)[0]
+  }, [outfits])
 
   async function fetchWeather(latitude: number, longitude: number) {
     try {
@@ -147,6 +158,7 @@ export default function TodayPage() {
         <section className="mb-7">
           <h2 className="mb-3 font-semibold">Статистика</h2>
           <div className="rounded-[24px] bg-[#faf8f4] p-4">
+            {favoritePair && <div className="mb-4 border-b border-[#e8e2d8] pb-4"><p className="mb-2 text-xs text-[#817b70]">Любимое сочетание</p><div className="flex items-center gap-3">{favoritePair.items.map((item) => item.photo_url && <img key={item.id} src={item.photo_url} alt={item.description || item.category} className="h-14 w-14 rounded-xl object-cover" />)}<p className="text-sm font-semibold">Встречается в любимых образах · {favoritePair.count}</p></div></div>}
             {mostWorn && (mostWorn.wear_count || 0) > 0 && <div className="mb-4 flex items-center gap-3 border-b border-[#e8e2d8] pb-4">{mostWorn.photo_url && <img src={mostWorn.photo_url} alt={mostWorn.description || mostWorn.category} className="h-14 w-14 rounded-xl object-cover" />}<div><p className="text-xs text-[#817b70]">Чаще всего надеваете</p><p className="mt-1 text-sm font-semibold">{mostWorn.description || mostWorn.category} · {mostWorn.wear_count}</p></div></div>}
             <div className="space-y-3">{Object.entries(categoryCount).sort((a, b) => b[1] - a[1]).map(([category, count]) => <div key={category} className="flex items-center gap-3"><span className="w-28 truncate text-xs text-[#686258]">{category}</span><div className="h-2 flex-1 overflow-hidden rounded-full bg-[#ece7dd]"><div className="h-full rounded-full bg-[#65786d]" style={{ width: `${items.length ? count / items.length * 100 : 0}%` }} /></div><span className="w-5 text-right text-xs font-semibold">{count}</span></div>)}</div>
           </div>

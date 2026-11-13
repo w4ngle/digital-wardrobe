@@ -15,6 +15,7 @@ const ItemUpdate = z.object({
   warmth: z.number().int().min(1).max(5).nullable().optional(),
   formality: z.number().int().min(1).max(5).nullable().optional(),
   is_favorite: z.boolean().optional(),
+  availability: z.enum(['available', 'laundry', 'unavailable']).optional(),
 })
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

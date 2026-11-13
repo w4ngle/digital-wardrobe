@@ -13,6 +13,7 @@ export type Item = {
   is_favorite?: boolean
   wear_count?: number
   last_worn_at?: string | null
+  availability?: 'available' | 'laundry' | 'unavailable'
   created_at: string
 }
 
@@ -27,6 +28,7 @@ export type Outfit = {
   render_url?: string | null
   is_favorite?: boolean
   planned_for?: string | null
+  rating?: -1 | 1 | null
   created_at: string
 }
 

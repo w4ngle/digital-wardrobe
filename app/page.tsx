@@ -76,6 +76,11 @@ export default function Home() {
     setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
   }
 
+  const handleAvailability = async (item: Item, availability: NonNullable<Item['availability']>) => {
+    const updated = await updateItem(item.id, { availability })
+    setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
+  }
+
   const filteredItems = items.filter(item => {
     if (filterCategory && item.category !== filterCategory) return false
     if (filterSeason && item.season !== filterSeason) return false
@@ -155,6 +160,7 @@ export default function Home() {
                 onEdit={(item) => setEditingItem(item)}
                 onFavorite={handleFavorite}
                 onWear={handleWear}
+                onAvailability={handleAvailability}
               />
             ))}
           </div>

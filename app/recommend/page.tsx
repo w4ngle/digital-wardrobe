@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createOutfit, getItems } from '@/lib/api'
-import { Item } from '@/lib/supabase'
-import { OCCASIONS, WEATHER, Occasion, OutfitRecommendation, Weather, recommendOutfits } from '@/lib/recommendations'
+import { createOutfit, getItems, getOutfits } from '@/lib/api'
+import { Item, OutfitWithItems } from '@/lib/supabase'
+import { OCCASIONS, WEATHER, Occasion, OutfitRecommendation, Weather, recommendOutfits, replaceOutfitItem } from '@/lib/recommendations'
 import { STYLES } from '@/lib/taxonomy'
-import OutfitCollage from '@/components/OutfitCollage'
+import { ArrowsClockwise, Lock, LockOpen, ThumbsDown, ThumbsUp } from '@phosphor-icons/react'
 
 function Choice<T extends string>({ values, value, onChange }: { values: readonly T[], value: T, onChange: (value: T) => void }) {
   return (
@@ -21,20 +21,54 @@ function Choice<T extends string>({ values, value, onChange }: { values: readonl
 
 export default function RecommendPage() {
   const [items, setItems] = useState<Item[]>([])
+  const [ratedOutfits, setRatedOutfits] = useState<OutfitWithItems[]>([])
   const [occasion, setOccasion] = useState<Occasion>('На каждый день')
   const [weather, setWeather] = useState<Weather>('Прохладно')
   const [style, setStyle] = useState<string>('Повседневный')
   const [results, setResults] = useState<OutfitRecommendation[]>([])
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState<number | null>(null)
+  const [locked, setLocked] = useState<Record<number, string[]>>({})
+  const [rated, setRated] = useState<Record<number, -1 | 1>>({})
 
   useEffect(() => {
-    getItems().then(setItems).catch(() => alert('Не удалось загрузить гардероб')).finally(() => setLoading(false))
+    Promise.all([getItems(), getOutfits()]).then(([loadedItems, loadedOutfits]) => {
+      setItems(loadedItems)
+      setRatedOutfits(loadedOutfits.filter((outfit) => outfit.rating))
+    }).catch(() => alert('Не удалось загрузить гардероб')).finally(() => setLoading(false))
   }, [])
+
+  const preferences = ratedOutfits.reduce<Record<string, number>>((scores, outfit) => {
+    outfit.items.forEach((item) => { scores[item.id] = (scores[item.id] || 0) + (outfit.rating === 1 ? 2 : -2) })
+    return scores
+  }, {})
 
   function handleRecommend() {
     setSaved(null)
-    setResults(recommendOutfits(items, { occasion, weather, style }))
+    setLocked({})
+    setRated({})
+    setResults(recommendOutfits(items, { occasion, weather, style }, 3, preferences))
+  }
+
+  function toggleLock(index: number, itemId: string) {
+    setLocked((current) => ({ ...current, [index]: current[index]?.includes(itemId) ? current[index].filter((id) => id !== itemId) : [...(current[index] || []), itemId] }))
+  }
+
+  function handleReplace(index: number, itemId: string) {
+    if (locked[index]?.includes(itemId)) return
+    setResults((current) => current.map((result, resultIndex) => resultIndex === index
+      ? replaceOutfitItem(items, result, itemId, { occasion, weather, style }, preferences)
+      : result))
+  }
+
+  async function handleRate(result: OutfitRecommendation, index: number, rating: -1 | 1) {
+    try {
+      const outfit = await createOutfit({ name: `${occasion} · ${style}`, occasion, notes: result.reason, rating }, result.items.map((item) => item.id))
+      setRated((current) => ({ ...current, [index]: rating }))
+      setRatedOutfits((current) => [...current, outfit])
+    } catch {
+      alert('Не удалось сохранить оценку')
+    }
   }
 
   async function handleSave(result: OutfitRecommendation, index: number) {
@@ -73,13 +107,31 @@ export default function RecommendPage() {
         <div className="mt-7 grid gap-5 sm:grid-cols-2">
           {results.map((result, index) => (
             <article key={result.items.map((item) => item.id).join(':')} className="overflow-hidden rounded-[24px] bg-[#faf8f4] shadow-[0_8px_24px_rgba(41,37,31,0.07)]">
-              <OutfitCollage items={result.items} />
+              <div className="grid grid-cols-2 gap-px bg-[#e8e2d8]">
+                {result.items.map((item) => {
+                  const isLocked = locked[index]?.includes(item.id)
+                  return <div key={item.id} className="relative aspect-square overflow-hidden bg-[#ece7de]">
+                    {item.photo_url && <img src={item.photo_url} alt={item.description || item.category} className="h-full w-full object-cover" />}
+                    <div className="absolute inset-x-1.5 bottom-1.5 flex items-center justify-between gap-1 rounded-full bg-white/90 p-1 pl-2 shadow-sm backdrop-blur">
+                      <span className="truncate text-[9px] font-semibold">{item.category}</span>
+                      <div className="flex shrink-0">
+                        <button type="button" onClick={() => handleReplace(index, item.id)} disabled={isLocked} className="p-1 disabled:opacity-30" aria-label="Заменить вещь"><ArrowsClockwise size={15} /></button>
+                        <button type="button" onClick={() => toggleLock(index, item.id)} className="p-1" aria-label={isLocked ? 'Открепить вещь' : 'Закрепить вещь'}>{isLocked ? <Lock size={15} weight="fill" /> : <LockOpen size={15} />}</button>
+                      </div>
+                    </div>
+                  </div>
+                })}
+              </div>
               <div className="p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#65786d]">Вариант {index + 1}</p>
                 <p className="mt-2 text-sm leading-6 text-[#686258]">{result.reason}</p>
                 <button type="button" onClick={() => handleSave(result, index)} disabled={saved === index} className="mt-4 w-full rounded-xl bg-[#ece7dd] px-4 py-3 text-sm font-semibold text-[#3f4f46] disabled:bg-[#dfe9e2]">
                   {saved === index ? '✓ Сохранено' : 'Сохранить образ'}
                 </button>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => handleRate(result, index, 1)} disabled={Boolean(rated[index])} className="flex items-center justify-center gap-2 rounded-xl border border-[#cfd9d2] px-3 py-2 text-xs font-semibold disabled:bg-[#dfe9e2]"><ThumbsUp size={16} />{rated[index] === 1 ? 'Учтено' : 'Нравится'}</button>
+                  <button type="button" onClick={() => handleRate(result, index, -1)} disabled={Boolean(rated[index])} className="flex items-center justify-center gap-2 rounded-xl border border-[#e0d0ce] px-3 py-2 text-xs font-semibold disabled:bg-[#efe3e1]"><ThumbsDown size={16} />{rated[index] === -1 ? 'Учтено' : 'Не моё'}</button>
+                </div>
               </div>
             </article>
           ))}
