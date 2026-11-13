@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { describeImage } from '@/lib/ai/provider'
+import { hasValidSession } from '@/lib/telegram-auth'
 
 export async function POST(req: NextRequest) {
+  if (!await hasValidSession()) {
+    return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  }
+
   try {
     const { imageUrl } = await req.json()
 

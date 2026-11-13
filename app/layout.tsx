@@ -22,9 +22,10 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body>
-        {children}
-        <BottomNav />
-        <TelegramApp />
+        <TelegramApp>
+          {children}
+          <BottomNav />
+        </TelegramApp>
       </body>
     </html>
   );

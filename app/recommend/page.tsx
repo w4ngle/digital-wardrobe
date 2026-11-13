@@ -63,7 +63,6 @@ export default function RecommendPage() {
         name: `${occasion} · ${style}`,
         occasion,
         notes: result.reason,
-        source: 'rules',
       }, result.items.map((item) => item.id))
       setSaved(index)
     } catch {
