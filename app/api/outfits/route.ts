@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { hasValidSession } from '@/lib/telegram-auth'
+import { allowedTelegramUserIds, currentTelegramUserId, hasValidSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { signItemPhotos } from '@/lib/server-photos'
 
@@ -33,13 +33,15 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  const userId = await currentTelegramUserId()
+  if (!userId) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
 
   const parsed = OutfitInput.safeParse(await request.json())
   if (!parsed.success) return NextResponse.json({ error: 'Проверьте образ' }, { status: 400 })
 
   const admin = getSupabaseAdmin()
-  const { data: outfit, error } = await admin.from('outfits').insert(parsed.data.outfit).select().single()
+  const suggested_by = userId === allowedTelegramUserIds()[0] ? 'owner' : 'partner'
+  const { data: outfit, error } = await admin.from('outfits').insert({ ...parsed.data.outfit, suggested_by }).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const links = parsed.data.itemIds.map((item_id) => ({ outfit_id: outfit.id, item_id }))

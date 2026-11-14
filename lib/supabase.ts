@@ -29,6 +29,7 @@ export type Outfit = {
   is_favorite?: boolean
   planned_for?: string | null
   rating?: -1 | 1 | null
+  suggested_by?: 'owner' | 'partner' | null
   created_at: string
 }
 

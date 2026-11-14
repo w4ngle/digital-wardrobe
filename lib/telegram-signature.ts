@@ -10,7 +10,7 @@ function signature(value: string, botToken: string) {
 export function validateTelegramInitData(
   initData: string,
   botToken: string,
-  allowedUserId: number,
+  allowedUserId: number | number[],
   now = Math.floor(Date.now() / 1000)
 ) {
   const params = new URLSearchParams(initData)
@@ -33,7 +33,8 @@ export function validateTelegramInitData(
 
   try {
     const user = JSON.parse(userJson) as { id?: number }
-    return user.id === allowedUserId ? user.id : null
+    const allowed = Array.isArray(allowedUserId) ? allowedUserId : [allowedUserId]
+    return user.id && allowed.includes(user.id) ? user.id : null
   } catch {
     return null
   }
@@ -48,7 +49,7 @@ export function createSession(userId: number, botToken: string, now = Math.floor
 export function verifySession(
   token: string,
   botToken: string,
-  allowedUserId: number,
+  allowedUserId: number | number[],
   now = Math.floor(Date.now() / 1000)
 ) {
   const [userId, expires, supplied] = token.split('.')
@@ -56,7 +57,8 @@ export function verifySession(
   const expected = signature(value, botToken)
   if (!supplied || supplied.length !== expected.length) return false
   if (!timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) return false
-  return Number(expires) > now && Number(userId) === allowedUserId
+  const allowed = Array.isArray(allowedUserId) ? allowedUserId : [allowedUserId]
+  return Number(expires) > now && allowed.includes(Number(userId))
 }
 
 export const telegramSessionMaxAge = SESSION_TTL_SECONDS

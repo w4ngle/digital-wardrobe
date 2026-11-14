@@ -16,8 +16,13 @@ function botToken() {
   return token
 }
 
+export function allowedTelegramUserIds() {
+  const value = process.env.TELEGRAM_ALLOWED_USER_IDS || process.env.TELEGRAM_ALLOWED_USER_ID || ''
+  return value.split(',').map(Number).filter(Number.isSafeInteger)
+}
+
 export function validateTelegramInitData(initData: string) {
-  return validateInitData(initData, botToken(), Number(process.env.TELEGRAM_ALLOWED_USER_ID))
+  return validateInitData(initData, botToken(), allowedTelegramUserIds())
 }
 
 export function createSession(userId: number) {
@@ -27,10 +32,17 @@ export function createSession(userId: number) {
 export async function hasValidSession() {
   if (process.env.NODE_ENV === 'development') return true
 
-  const token = (await cookies()).get(COOKIE_NAME)?.value
-  if (!token) return false
+  return Boolean(await currentTelegramUserId())
+}
 
-  return verifySession(token, botToken(), Number(process.env.TELEGRAM_ALLOWED_USER_ID))
+export async function currentTelegramUserId() {
+  if (process.env.NODE_ENV === 'development') return allowedTelegramUserIds()[0] || 1
+
+  const token = (await cookies()).get(COOKIE_NAME)?.value
+  if (!token) return null
+
+  if (!verifySession(token, botToken(), allowedTelegramUserIds())) return null
+  return Number(token.split('.')[0])
 }
 
 export const telegramSession = {

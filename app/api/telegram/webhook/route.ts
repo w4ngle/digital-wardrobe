@@ -1,4 +1,5 @@
 import { appUrl, botReply } from '@/lib/bot-messages'
+import { allowedTelegramUserIds } from '@/lib/telegram-auth'
 
 type TelegramUpdate = {
   message?: {
@@ -15,8 +16,7 @@ export async function POST(request: Request) {
 
   const update = await request.json() as TelegramUpdate
   const message = update.message
-  const allowedUserId = Number(process.env.TELEGRAM_ALLOWED_USER_ID)
-  if (!message || message.from?.id !== allowedUserId) return Response.json({ ok: true })
+  if (!message || !message.from?.id || !allowedTelegramUserIds().includes(message.from.id)) return Response.json({ ok: true })
 
   const token = process.env.TELEGRAM_BOT_TOKEN
   if (!token) return new Response('Bot token is missing', { status: 500 })

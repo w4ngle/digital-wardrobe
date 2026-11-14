@@ -25,4 +25,10 @@ describe('Telegram signatures', () => {
     expect(verifySession(session, 'bot-token', 42, 1_001)).toBe(true)
     expect(verifySession(`${session}changed`, 'bot-token', 42, 1_001)).toBe(false)
   })
+
+  it('accepts either person in a shared wardrobe', () => {
+    const initData = signedInitData('bot-token', 7, 1_000)
+    expect(validateTelegramInitData(initData, 'bot-token', [42, 7], 1_001)).toBe(7)
+    expect(verifySession(createSession(7, 'bot-token', 1_000), 'bot-token', [42, 7], 1_001)).toBe(true)
+  })
 })

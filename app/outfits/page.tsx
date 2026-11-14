@@ -14,6 +14,7 @@ export default function OutfitsPage() {
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
   const [occasion, setOccasion] = useState('')
+  const [notes, setNotes] = useState('')
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
 
   async function loadData() {
@@ -43,9 +44,10 @@ export default function OutfitsPage() {
     if (selectedItemIds.length < 2) return
     setSaving(true)
     try {
-      await createOutfit({ name, occasion: occasion.trim() || null, notes: null }, selectedItemIds)
+      await createOutfit({ name, occasion: occasion.trim() || null, notes: notes.trim() || null }, selectedItemIds)
       setName('')
       setOccasion('')
+      setNotes('')
       setSelectedItemIds([])
       setShowForm(false)
       await loadData()
@@ -95,6 +97,7 @@ export default function OutfitsPage() {
               <div className="space-y-2">
                 <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} placeholder="Название образа" className="w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#65786d]" />
                 <input value={occasion} onChange={(e) => setOccasion(e.target.value)} maxLength={100} placeholder="Куда пойдёте?" className="w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#65786d]" />
+                <input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder="Записка к образу" className="w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#65786d]" />
                 <p className="text-xs text-[#817b70]">Выбрано: {selectedItems.length}</p>
               </div>
             </div>
@@ -128,7 +131,7 @@ export default function OutfitsPage() {
                 <OutfitCollage items={outfit.items} />
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0"><h2 className="truncate font-semibold">{outfit.name}</h2><p className="mt-1 truncate text-xs text-[#817b70]">{outfit.occasion || `${outfit.items.length} вещи`}</p></div>
+                    <div className="min-w-0"><h2 className="truncate font-semibold">{outfit.name}</h2><p className="mt-1 truncate text-xs text-[#817b70]">{outfit.suggested_by === 'partner' ? '💌 Предложение от любимого' : outfit.occasion || `${outfit.items.length} вещи`}</p></div>
                     <div className="flex shrink-0 gap-2">
                       <button onClick={() => handleFavorite(outfit)} className="text-[#6f1820]" aria-label={outfit.is_favorite ? 'Убрать из избранного' : 'Добавить в избранное'}><Heart size={20} weight={outfit.is_favorite ? 'fill' : 'regular'} aria-hidden /></button>
                       <button onClick={() => handleDelete(outfit.id)} className="text-[#6f1820]" aria-label="Удалить образ"><X size={20} aria-hidden /></button>
