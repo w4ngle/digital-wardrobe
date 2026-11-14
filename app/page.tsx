@@ -35,7 +35,7 @@ export default function Home() {
     season: string
     style: string
     description: string
-    warmth: number
+    warmth?: number
     formality: number
     photo_url: string | null
     ai_meta: Record<string, unknown> | null
@@ -123,7 +123,7 @@ export default function Home() {
         <header className="mb-7 flex items-start justify-between gap-4">
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#817b70]">
-              Для тебя, солнышко
+              Личный гардероб
             </p>
             <h1 className="text-4xl font-bold leading-none tracking-[-0.04em] text-[#1e3026] sm:text-5xl">
               Гардероб

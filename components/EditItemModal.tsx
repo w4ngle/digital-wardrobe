@@ -5,7 +5,7 @@ import { Item } from '@/lib/supabase'
 import { uploadPhoto } from '@/lib/api'
 import { Camera, ImageSquare, X } from '@phosphor-icons/react'
 import { removeImageBackground } from '@/lib/background-removal'
-import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES } from '@/lib/taxonomy'
+import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES, supportsLength, supportsWarmth } from '@/lib/taxonomy'
 
 type EditItemModalProps = {
   item: Item
@@ -26,6 +26,8 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
   const [layerRole, setLayerRole] = useState(item.layer_role || 'Базовый слой')
   const [comfort, setComfort] = useState(item.comfort ?? 3)
   const [confidence, setConfidence] = useState(item.confidence ?? 3)
+  const [warmth, setWarmth] = useState(item.warmth ?? 3)
+  const [formality, setFormality] = useState(item.formality ?? 3)
   const [needsUnderlayer, setNeedsUnderlayer] = useState(Boolean(item.needs_underlayer))
   const [rainSafe, setRainSafe] = useState(Boolean(item.rain_safe))
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -72,7 +74,8 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
         category, color, season, style, photo_url: photoUrl,
         subcategory: subcategory || null,
         custom_name: customName.trim() || null,
-        fit, length: length || null, pattern, layer_role: layerRole,
+        fit, length: supportsLength(category, subcategory) ? length || null : null, pattern, layer_role: layerRole,
+        warmth: supportsWarmth(category) ? warmth : null, formality,
         comfort, confidence, needs_underlayer: needsUnderlayer, rain_safe: rainSafe,
       })
       onClose()
@@ -166,12 +169,13 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
               <label className="text-sm font-semibold">Посадка<select value={fit} onChange={(e) => setFit(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{FITS.map((value) => <option key={value}>{value}</option>)}</select></label>
               <label className="text-sm font-semibold">Принт / фактура<select value={pattern} onChange={(e) => setPattern(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{PATTERNS.map((value) => <option key={value}>{value}</option>)}</select></label>
             </div>
-            {['Платье', 'Низ', 'Верхняя одежда'].includes(category) && <label className="block text-sm font-semibold">Длина<select value={length} onChange={(e) => setLength(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal"><option value="">Не указывать</option>{LENGTHS.map((value) => <option key={value}>{value}</option>)}</select></label>}
+            {supportsLength(category, subcategory) && <label className="block text-sm font-semibold">Длина<select value={length} onChange={(e) => setLength(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal"><option value="">Не указывать</option>{LENGTHS.map((value) => <option key={value}>{value}</option>)}</select></label>}
             {category === 'Верх' && <label className="block text-sm font-semibold">Роль в образе<select value={layerRole} onChange={(e) => setLayerRole(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{LAYER_ROLES.map((value) => <option key={value}>{value}</option>)}</select></label>}
             <div className="grid grid-cols-2 gap-3">
               <label className="text-sm font-semibold">Комфорт (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(comfort) ? '' : comfort} onChange={(e) => setComfort(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
               <label className="text-sm font-semibold">Уверенность (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(confidence) ? '' : confidence} onChange={(e) => setConfidence(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
             </div>
+            <div className="grid grid-cols-2 gap-3">{supportsWarmth(category) && <label className="text-sm font-semibold">Теплота (1–5)<input type="number" min="1" max="5" value={warmth} onChange={(e) => setWarmth(e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>}<label className="text-sm font-semibold">Формальность (1–5)<input type="number" min="1" max="5" value={formality} onChange={(e) => setFormality(e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label></div>
             <div className="space-y-2 rounded-2xl bg-[#f3ede4] p-4">
               <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={needsUnderlayer} onChange={(e) => setNeedsUnderlayer(e.target.checked)} className="h-5 w-5" />Нужен особый нижний слой</label>
               {(category === 'Обувь' || category === 'Верхняя одежда') && <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={rainSafe} onChange={(e) => setRainSafe(e.target.checked)} className="h-5 w-5" />Подходит для дождя</label>}

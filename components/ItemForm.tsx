@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { uploadPhoto } from '@/lib/api'
-import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES } from '@/lib/taxonomy'
+import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES, supportsLength, supportsWarmth } from '@/lib/taxonomy'
 import { Camera, ImageSquare } from '@phosphor-icons/react'
 import { removeImageBackground } from '@/lib/background-removal'
 
@@ -13,7 +13,7 @@ type ItemFormProps = {
     season: string
     style: string
     description: string
-    warmth: number
+    warmth?: number
     formality: number
     photo_url: string | null
     ai_meta: Record<string, unknown> | null
@@ -136,14 +136,14 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         season,
         style,
         description,
-        warmth,
+        warmth: supportsWarmth(category) && !Number.isNaN(warmth) ? warmth : undefined,
         formality,
         photo_url: photoUrl,
         ai_meta: null,
         subcategory: subcategory || null,
         custom_name: customName.trim() || null,
         fit,
-        length: length || null,
+        length: supportsLength(category, subcategory) ? length || null : null,
         pattern,
         layer_role: layerRole,
         comfort,
@@ -256,7 +256,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         <label className="text-sm font-semibold text-[#1e3026]">Принт / фактура<select value={pattern} onChange={(e) => setPattern(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{PATTERNS.map((option) => <option key={option}>{option}</option>)}</select></label>
       </div>
 
-      {['Платье', 'Низ', 'Верхняя одежда'].includes(category) && <label className="block text-sm font-semibold text-[#1e3026]">Длина<select value={length} onChange={(e) => setLength(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal"><option value="">Не указывать</option>{LENGTHS.map((option) => <option key={option}>{option}</option>)}</select></label>}
+      {supportsLength(category, subcategory) && <label className="block text-sm font-semibold text-[#1e3026]">Длина<select value={length} onChange={(e) => setLength(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal"><option value="">Не указывать</option>{LENGTHS.map((option) => <option key={option}>{option}</option>)}</select></label>}
 
       {category === 'Верх' && <label className="block text-sm font-semibold text-[#1e3026]">Роль в образе<select value={layerRole} onChange={(e) => setLayerRole(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{LAYER_ROLES.map((option) => <option key={option}>{option}</option>)}</select></label>}
 
@@ -311,8 +311,10 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <details className="rounded-2xl border border-[#dfd4c4] bg-white p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[#1e3026]">Дополнительные характеристики</summary>
+        <div className="mt-4 grid grid-cols-2 gap-4">
+        {supportsWarmth(category) && <div>
           <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
             Теплота (1-5)
           </label>
@@ -320,13 +322,12 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
             type="number"
             min="1"
             max="5"
-            required
             value={Number.isNaN(warmth) ? '' : warmth}
             onChange={(e) => setWarmth(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)}
             className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
           />
           <p className="mt-1 text-xs text-[#81786d]">1 — лёгкая, 5 — тёплая</p>
-        </div>
+        </div>}
 
         <div>
           <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
@@ -354,6 +355,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={needsUnderlayer} onChange={(e) => setNeedsUnderlayer(e.target.checked)} className="h-5 w-5" /><span><strong>Нужен особый нижний слой</strong><span className="block text-xs text-[#81786d]">Например, вещь просвечивает</span></span></label>
         {(category === 'Обувь' || category === 'Верхняя одежда') && <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={rainSafe} onChange={(e) => setRainSafe(e.target.checked)} className="h-5 w-5" /><span><strong>Подходит для дождя</strong></span></label>}
       </div>
+      </details>
 
       <div className="flex gap-3 pt-2">
         <button

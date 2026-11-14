@@ -42,7 +42,13 @@ export default function OutfitsPage() {
   const visibleOutfits = outfits.filter((outfit) => outfit.rating !== -1)
 
   function toggleItem(id: string) {
-    setSelectedItemIds((current) => current.includes(id) ? current.filter((itemId) => itemId !== id) : [...current, id])
+    const item = allItems.find((candidate) => candidate.id === id)
+    if (!item) return
+    setSelectedItemIds((current) => {
+      if (current.includes(id)) return current.filter((itemId) => itemId !== id)
+      const sameCategory = current.find((itemId) => allItems.find((candidate) => candidate.id === itemId)?.category === item.category)
+      return sameCategory ? current.map((itemId) => itemId === sameCategory ? id : itemId) : [...current, id]
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -124,7 +130,7 @@ export default function OutfitsPage() {
 
             <h2 className="mb-3 text-sm font-semibold">Выберите вещи</h2>
             <div className="grid max-h-[420px] grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-5">
-              {allItems.map((item) => {
+              {allItems.filter((item) => !item.availability || item.availability === 'available').map((item) => {
                 const selected = selectedItemIds.includes(item.id)
                 return (
                   <button type="button" key={item.id} onClick={() => toggleItem(item.id)} className={`relative overflow-hidden rounded-2xl border-2 bg-[#ece7de] transition ${selected ? 'border-[#26372f]' : 'border-transparent'}`} aria-pressed={selected}>

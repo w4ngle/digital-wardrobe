@@ -1,16 +1,20 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { isCronRequest } from '@/lib/cron-auth'
 
 export async function GET(request: Request) {
-  if (!process.env.CRON_SECRET || request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) return new Response('Unauthorized', { status: 401 })
+  if (!isCronRequest(request)) return new Response('Unauthorized', { status: 401 })
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chatId = process.env.TELEGRAM_ALLOWED_USER_ID
   if (!token || !chatId) return new Response('Telegram is not configured', { status: 500 })
 
   const since = new Date()
   since.setUTCHours(0, 0, 0, 0)
-  const { data: items, error } = await getSupabaseAdmin().from('items').select('id, description, custom_name, subcategory, category').gte('last_worn_at', since.toISOString())
+  const { data: wornItems, error } = await getSupabaseAdmin().from('items').select('id, description, custom_name, subcategory, category, layer_role, wears_since_wash').gte('last_worn_at', since.toISOString())
   if (error) return new Response(error.message, { status: 500 })
-  if (!items?.length) return Response.json({ ok: true, skipped: 'nothing worn' })
+  const items = (wornItems || []).filter((item) => item.category === 'Верхняя одежда'
+    ? (item.wears_since_wash || 0) >= 5
+    : item.layer_role === 'Второй слой' ? (item.wears_since_wash || 0) >= 2 : true)
+  if (!items.length) return Response.json({ ok: true, skipped: 'nothing needs washing' })
 
   const list = items.map((item) => `• ${item.custom_name || item.description || item.subcategory || item.category}`).join('\n')
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

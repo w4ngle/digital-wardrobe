@@ -1,7 +1,8 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { isCronRequest } from '@/lib/cron-auth'
 
 export async function GET(request: Request) {
-  if (!process.env.CRON_SECRET || request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) return new Response('Unauthorized', { status: 401 })
+  if (!isCronRequest(request)) return new Response('Unauthorized', { status: 401 })
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chatId = process.env.TELEGRAM_ALLOWED_USER_ID
   if (!token || !chatId) return new Response('Telegram is not configured', { status: 500 })

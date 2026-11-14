@@ -24,6 +24,13 @@ export default function TodayPage() {
   const [weather, setWeather] = useState<Weather | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
   const [history, setHistory] = useState<WearRecord[]>([])
+  const [openedItems, setOpenedItems] = useState<Item[] | null>(null)
+  const [openedTitle, setOpenedTitle] = useState('')
+
+  function openDetails(title: string, detailItems: Item[]) {
+    setOpenedTitle(title)
+    setOpenedItems(detailItems)
+  }
 
   useEffect(() => {
     Promise.all([getItems(), getOutfits(), getWearHistory()])
@@ -117,7 +124,7 @@ export default function TodayPage() {
     <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
       <div className="mx-auto max-w-4xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
         <header className="mb-7">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#81786d]">Для тебя, зайчик</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#81786d]">Мой гардероб</p>
           <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Сегодня</h1>
         </header>
 
@@ -134,7 +141,7 @@ export default function TodayPage() {
 
         <section className="mb-7 overflow-hidden rounded-[28px] border border-[#dfd4c4] bg-[#fffaf2]">
           <div className="flex items-end justify-between px-5 pb-4 pt-5">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6f1820]">Для тебя</p><h2 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#6f1820]">Образ дня</h2></div>
+            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6f1820]">Подборка</p><h2 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#6f1820]">Образ дня</h2></div>
             <Sparkle size={28} className="text-[#6f1820]" weight="duotone" aria-hidden />
           </div>
           {heroOutfit ? <OutfitCollage items={heroOutfit.items} /> : <div className="px-5 pb-6 text-sm text-[#81786d]">Собери первый образ — и он появится здесь.</div>}
@@ -152,7 +159,7 @@ export default function TodayPage() {
           {planned.length ? (
             <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {planned.map((outfit) => (
-                <article key={outfit.id} className="w-36 shrink-0 overflow-hidden rounded-2xl bg-[#faf8f4]"><OutfitCollage items={outfit.items} /><div className="p-3"><p className="truncate text-xs font-semibold">{outfit.name}</p><p className="mt-1 text-[10px] text-[#65786d]">{new Date(`${outfit.planned_for}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</p></div></article>
+                <button type="button" onClick={() => openDetails(outfit.name, outfit.items)} key={outfit.id} className="w-36 shrink-0 overflow-hidden rounded-2xl bg-[#faf8f4] text-left"><OutfitCollage items={outfit.items} /><span className="block p-3"><span className="block truncate text-xs font-semibold">{outfit.name}</span><span className="mt-1 block text-[10px] text-[#65786d]">{new Date(`${outfit.planned_for}T12:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</span></span></button>
               ))}
             </div>
           ) : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">Пока ничего не запланировано</p>}
@@ -160,7 +167,7 @@ export default function TodayPage() {
 
         <section className="mb-7">
           <h2 className="mb-3 font-semibold">Недавно носила</h2>
-          {history.length ? <div className="space-y-2">{history.slice(0, 7).map((entry) => <div key={entry.id} className="flex items-center gap-3 rounded-2xl bg-[#faf8f4] p-3">{entry.item?.photo_url && <img src={entry.item.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover" />}<div className="min-w-0"><p className="truncate text-sm font-semibold">{entry.item?.custom_name || entry.item?.description || entry.item?.subcategory || entry.item?.category || 'Вещь'}</p><p className="mt-1 text-xs text-[#817b70]">{new Date(entry.worn_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}{entry.laundry_decision === 'laundry' ? ' · в стирке' : ''}</p></div></div>)}</div> : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">История появится после отметки «Надела сегодня»</p>}
+          {history.length ? <div className="space-y-2">{history.slice(0, 7).map((entry) => <button type="button" onClick={() => entry.item && openDetails(entry.item.custom_name || entry.item.description || entry.item.subcategory || entry.item.category, [entry.item])} key={entry.id} className="flex w-full items-center gap-3 rounded-2xl bg-[#faf8f4] p-3 text-left">{entry.item?.photo_url && <img src={entry.item.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover" />}<span className="min-w-0"><span className="block truncate text-sm font-semibold">{entry.item?.custom_name || entry.item?.description || entry.item?.subcategory || entry.item?.category || 'Вещь'}</span><span className="mt-1 block text-xs text-[#817b70]">{new Date(entry.worn_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}{entry.laundry_decision === 'laundry' ? ' · в стирке' : ''}</span></span></button>)}</div> : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">История появится после отметки «Надела сегодня»</p>}
         </section>
 
         <section className="mb-7">
@@ -174,9 +181,10 @@ export default function TodayPage() {
 
         <section>
           <h2 className="mb-3 font-semibold">Избранное</h2>
-          {favoriteItems.length || favoriteOutfits.length ? <div className="grid grid-cols-4 gap-2">{favoriteItems.slice(0, 4).map((item) => <div key={item.id} className="overflow-hidden rounded-xl bg-[#faf8f4]">{item.photo_url && <img src={item.photo_url} alt={item.description || item.category} className="aspect-square w-full object-cover" />}</div>)}{favoriteOutfits.slice(0, Math.max(0, 4 - favoriteItems.length)).map((outfit) => <div key={outfit.id} className="overflow-hidden rounded-xl"><OutfitCollage items={outfit.items} /></div>)}</div> : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">Нажмите ♡ у вещи или образа</p>}
+          {favoriteItems.length || favoriteOutfits.length ? <div className="grid grid-cols-4 gap-2">{favoriteItems.map((item) => <button type="button" onClick={() => openDetails(item.custom_name || item.description || item.category, [item])} key={item.id} className="overflow-hidden rounded-xl bg-[#faf8f4]">{item.photo_url && <img src={item.photo_url} alt={item.description || item.category} className="aspect-square w-full object-cover" />}</button>)}{favoriteOutfits.map((outfit) => <button type="button" onClick={() => openDetails(outfit.name, outfit.items)} key={outfit.id} className="overflow-hidden rounded-xl"><OutfitCollage items={outfit.items} /></button>)}</div> : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">Нажмите ♡ у вещи или образа</p>}
         </section>
       </div>
+      {openedItems && <div className="fixed inset-0 z-50 flex items-end bg-black/45 p-3 sm:items-center sm:justify-center" onClick={() => setOpenedItems(null)}><section className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[28px] bg-[#fffaf2] p-5" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">{openedTitle}</h2><button type="button" onClick={() => setOpenedItems(null)} className="h-10 w-10 rounded-full bg-[#eee9df] text-xl" aria-label="Закрыть">×</button></div><div className="grid grid-cols-2 gap-3">{openedItems.map((item) => <div key={item.id} className="overflow-hidden rounded-2xl bg-white">{item.photo_url && <img src={item.photo_url} alt={item.custom_name || item.category} className="aspect-square w-full object-cover" />}<div className="p-3"><p className="text-sm font-semibold">{item.custom_name || item.description || item.subcategory || item.category}</p><p className="mt-1 text-xs text-[#817b70]">{item.category} · {item.color}</p></div></div>)}</div></section></div>}
     </main>
   )
 }

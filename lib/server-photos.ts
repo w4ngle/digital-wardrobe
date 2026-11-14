@@ -14,11 +14,10 @@ export function photoPath(value: string | null) {
 
 export async function signItemPhotos<T extends Item>(items: T[]) {
   const storage = getSupabaseAdmin().storage.from('wardrobe-items')
-  return Promise.all(items.map(async (item) => {
-    const path = photoPath(item.photo_url)
-    if (!path) return item
-
-    const { data } = await storage.createSignedUrl(path, 60 * 60)
-    return { ...item, photo_url: data?.signedUrl ?? null }
-  }))
+  const paths = items.map((item) => photoPath(item.photo_url))
+  const uniquePaths = [...new Set(paths.filter((path): path is string => Boolean(path)))]
+  if (!uniquePaths.length) return items
+  const { data } = await storage.createSignedUrls(uniquePaths, 60 * 60)
+  const urls = new Map((data || []).map((entry) => [entry.path, entry.signedUrl]))
+  return items.map((item, index) => ({ ...item, photo_url: paths[index] ? urls.get(paths[index]!) || null : null }))
 }

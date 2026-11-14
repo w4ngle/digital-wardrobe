@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       chat_id: message.chat.id,
       text: botReply(message.text),
       reply_markup: {
-        inline_keyboard: [[{ text: 'Открыть подарок ✨', web_app: { url: appUrl } }]],
+        inline_keyboard: [[{ text: 'Открыть гардероб', web_app: { url: appUrl } }]],
       },
     }),
   })

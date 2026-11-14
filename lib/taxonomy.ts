@@ -50,3 +50,11 @@ export const LAYER_ROLES = ['Базовый слой', 'Второй слой', 
 export type Category = typeof CATEGORIES[number]
 export type Season = typeof SEASONS[number]
 export type Style = typeof STYLES[number]
+
+export function supportsLength(category: string, subcategory?: string | null) {
+  return category === 'Платье' || Boolean(subcategory?.startsWith('Юбка'))
+}
+
+export function supportsWarmth(category: string) {
+  return ['Верх', 'Платье', 'Комплект', 'Обувь', 'Верхняя одежда', 'Домашняя одежда'].includes(category)
+}

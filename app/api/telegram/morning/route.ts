@@ -1,12 +1,10 @@
 import { appUrl, morningOutfitMessage } from '@/lib/bot-messages'
 import { recommendOutfits, Weather } from '@/lib/recommendations'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
+import { isCronRequest } from '@/lib/cron-auth'
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET
-  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
-    return new Response('Unauthorized', { status: 401 })
-  }
+  if (!isCronRequest(request)) return new Response('Unauthorized', { status: 401 })
 
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chatId = process.env.TELEGRAM_ALLOWED_USER_ID
