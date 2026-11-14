@@ -1,6 +1,6 @@
 import { Item } from './supabase'
 
-export const OCCASIONS = ['На каждый день', 'Прогулка', 'Работа', 'Ресторан'] as const
+export const OCCASIONS = ['На каждый день', 'Университет', 'Обычная прогулка', 'Прогулка в центре', 'Магазин / ПВЗ', 'Ресторан', 'Свидание', 'В гости', 'Праздник / на выход', 'Деловое выступление', 'Поездка', 'Тренировка', 'Пляж / бассейн', 'Активный отдых'] as const
 export const WEATHER = ['Тепло', 'Прохладно', 'Холодно'] as const
 
 export type Occasion = typeof OCCASIONS[number]
@@ -10,6 +10,7 @@ export type OutfitRequest = {
   occasion: Occasion
   weather: Weather
   style: string
+  rain?: boolean
 }
 
 export type OutfitRecommendation = {
@@ -18,14 +19,31 @@ export type OutfitRecommendation = {
   score: number
 }
 
-export type OutfitPreferences = Record<string, number>
+export type OutfitPreferences = Record<string, number> | { itemScores: Record<string, number>, rejectedCombos: string[][] }
+
+function learnedPreferences(preferences: OutfitPreferences) {
+  const structured = typeof preferences.itemScores === 'object'
+  return structured
+    ? preferences as { itemScores: Record<string, number>, rejectedCombos: string[][] }
+    : { itemScores: preferences as Record<string, number>, rejectedCombos: [] }
+}
 
 const targetWarmth: Record<Weather, number> = { Тепло: 1, Прохладно: 3, Холодно: 5 }
 const targetFormality: Record<Occasion, number> = {
   'На каждый день': 2,
-  Прогулка: 1,
-  Работа: 4,
+  Университет: 3,
+  'Обычная прогулка': 1,
+  'Прогулка в центре': 2,
+  'Магазин / ПВЗ': 1,
   Ресторан: 4,
+  Свидание: 4,
+  'В гости': 3,
+  'Праздник / на выход': 5,
+  'Деловое выступление': 5,
+  Поездка: 2,
+  Тренировка: 1,
+  'Пляж / бассейн': 1,
+  'Активный отдых': 1,
 }
 const neutralColors = ['бел', 'черн', 'сер', 'беж', 'корич', 'молоч', 'джинс', 'темно-син']
 const colorPairs = [['син', 'беж'], ['голуб', 'корич'], ['зелен', 'беж'], ['бордов', 'сер'], ['красн', 'черн']]
@@ -72,7 +90,10 @@ function itemScore(item: Item, request: OutfitRequest, preferences: OutfitPrefer
   const style = item.style === request.style ? 4 : item.style === 'Повседневный' ? 1 : 0
   const warmth = 3 - Math.abs(inferredWarmth(item) - targetWarmth[request.weather])
   const formality = 3 - Math.abs(inferredFormality(item) - targetFormality[request.occasion])
-  return style + warmth + formality + (preferences[item.id] || 0)
+  const scores = learnedPreferences(preferences).itemScores
+  const comfort = (item.comfort || 3) - 3
+  const confidence = (item.confidence || 3) - 3
+  return style + warmth + formality + comfort + confidence + (scores[item.id] || 0)
 }
 
 function buildReason(request: OutfitRequest, hasOuterwear: boolean) {
@@ -81,13 +102,14 @@ function buildReason(request: OutfitRequest, hasOuterwear: boolean) {
 }
 
 export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 3, preferences: OutfitPreferences = {}): OutfitRecommendation[] {
-  const availableItems = items.filter((item) => !item.availability || item.availability === 'available')
+  const today = new Date().toISOString().slice(0, 10)
+  const availableItems = items.filter((item) => (!item.availability || item.availability === 'available') && (!item.snoozed_until || item.snoozed_until < today))
   const byCategory = (category: string) => availableItems
     .filter((item) => item.category === category)
     .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))
     .slice(0, 8)
 
-  const tops = byCategory('Верх')
+  const tops = byCategory('Верх').filter((item) => item.layer_role !== 'Второй слой')
   const bottoms = byCategory('Низ')
   const shoes: Array<Item | null> = byCategory('Обувь')
   if (shoes.length === 0) shoes.push(null)
@@ -96,27 +118,38 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
   const outerwear: Array<Item | null> = request.weather === 'Тепло'
     ? [null]
     : outerwearItems.length > 0 ? outerwearItems : [null]
-  const accessories: Array<Item | null> = [null, ...byCategory('Аксессуар').slice(0, 4)]
+  const secondLayers: Array<Item | null> = request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой').slice(0, 3)]
+  const extras: Array<Item | null> = [null, ...byCategory('Сумка').slice(0, 2), ...byCategory('Аксессуар').slice(0, 2)]
   const candidates: OutfitRecommendation[] = []
+  const cores: Item[][] = []
 
-  for (const top of tops) {
-    for (const bottom of bottoms) {
+  if (request.occasion === 'Пляж / бассейн') byCategory('Купальник').forEach((item) => cores.push([item]))
+  else {
+    for (const top of tops) for (const bottom of bottoms) cores.push([top, bottom])
+    byCategory('Платье').forEach((item) => cores.push([item]))
+    byCategory('Комплект').forEach((item) => cores.push([item]))
+  }
+
+  for (const core of cores) {
       for (const shoe of shoes) {
         for (const layer of outerwear) {
-          for (const accessory of accessories) {
-            const outfit = [top, bottom, shoe, layer, accessory].filter((item): item is Item => item !== null)
+          for (const secondLayer of secondLayers) {
+          for (const extra of extras) {
+            const outfit = [...core, shoe, secondLayer, layer, extra].filter((item): item is Item => item !== null)
             const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request, preferences), 0)
-            const colors = colorScore(top.color, bottom.color) + (shoe ? colorScore(bottom.color, shoe.color) : 0)
+            const colors = core.length > 1 ? colorScore(core[0].color, core[1].color) : 2
             const coldLayerPenalty = request.weather === 'Холодно' && !layer ? -5 : 0
+            const rainPenalty = request.rain && !outfit.some((item) => item.rain_safe) ? -5 : 0
+            const printPenalty = outfit.filter((item) => item.pattern && item.pattern !== 'Однотонная').length > 1 ? -3 : 0
             candidates.push({
               items: outfit,
-              score: itemTotal + colors + outfitBalance(outfit) + coldLayerPenalty,
+              score: itemTotal + colors + outfitBalance(outfit) + coldLayerPenalty + rainPenalty + printPenalty,
               reason: buildReason(request, Boolean(layer)),
             })
           }
+          }
         }
       }
-    }
   }
 
   if (candidates.length === 0) {
@@ -135,14 +168,18 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
     .sort((a, b) => b.score - a.score)
     .filter((candidate, index, sorted) => {
       const key = candidate.items.map((item) => item.id).sort().join(':')
-      return sorted.findIndex((other) => other.items.map((item) => item.id).sort().join(':') === key) === index
+      const rejected = learnedPreferences(preferences).rejectedCombos.some((combo) => {
+        const ids = new Set(candidate.items.map((item) => item.id))
+        return combo.filter((id) => ids.has(id)).length >= Math.max(2, Math.min(combo.length, ids.size) - 1)
+      })
+      return !rejected && sorted.findIndex((other) => other.items.map((item) => item.id).sort().join(':') === key) === index
     })
 
   const varied: OutfitRecommendation[] = []
   for (const candidate of unique) {
-    const core = candidate.items.filter((item) => item.category !== 'Аксессуар')
+    const core = candidate.items.filter((item) => !['Аксессуар', 'Сумка'].includes(item.category))
     const isTooSimilar = varied.some((selected) => {
-      const selectedIds = new Set(selected.items.filter((item) => item.category !== 'Аксессуар').map((item) => item.id))
+      const selectedIds = new Set(selected.items.filter((item) => !['Аксессуар', 'Сумка'].includes(item.category)).map((item) => item.id))
       return core.filter((item) => selectedIds.has(item.id)).length >= Math.max(2, core.length - 1)
     })
     if (!isTooSimilar || varied.length === 0) varied.push(candidate)

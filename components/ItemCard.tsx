@@ -10,11 +10,12 @@ type ItemCardProps = {
   onFavorite: (item: Item) => Promise<void>
   onWear: (item: Item) => Promise<void>
   onAvailability: (item: Item, availability: NonNullable<Item['availability']>) => Promise<void>
+  onSnooze: (item: Item, days: number) => Promise<void>
 }
 
 const availabilityLabels = { available: 'Доступна', laundry: 'В стирке', unavailable: 'Недоступна' } as const
 
-export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, onAvailability }: ItemCardProps) {
+export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, onAvailability, onSnooze }: ItemCardProps) {
   const handleDelete = async () => {
     if (!confirm('Удалить эту вещь?')) return
     try {
@@ -39,7 +40,7 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
         )}
 
         <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-8rem)] truncate rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#4d4941] shadow-sm backdrop-blur">
-          {item.category}
+          {item.subcategory || item.category}
         </span>
 
         <div className="absolute right-2.5 top-2.5 flex gap-1.5">
@@ -69,7 +70,7 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
 
       <div className="px-3.5 pb-4 pt-3">
         <h2 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-[#2d2a25] sm:text-base">
-          {item.description || `${item.color}, ${item.category.toLowerCase()}`}
+          {item.custom_name || item.description || `${item.color}, ${(item.subcategory || item.category).toLowerCase()}`}
         </h2>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <span className="rounded-full bg-[#eee9df] px-2 py-1 text-[10px] text-[#746e64]">{item.color}</span>
@@ -84,6 +85,7 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
             {Object.entries(availabilityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
+        <label className="mt-2 block text-[10px] font-medium text-[#817b70]">Не предлагать<select value="" onChange={(event) => { if (event.target.value) void onSnooze(item, Number(event.target.value)); event.target.value = '' }} className="mt-1 w-full rounded-xl border border-[#ddd7cc] bg-white px-2 py-2 text-xs text-[#52635a]"><option value="">Выбрать срок</option><option value="3">3 дня</option><option value="7">Неделю</option><option value="30">Месяц</option></select></label>
       </div>
     </article>
   )

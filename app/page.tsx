@@ -38,6 +38,16 @@ export default function Home() {
     formality: number
     photo_url: string | null
     ai_meta: Record<string, unknown> | null
+    subcategory: string | null
+    custom_name: string | null
+    fit: string | null
+    length: string | null
+    pattern: string | null
+    layer_role: string | null
+    comfort: number
+    confidence: number
+    needs_underlayer: boolean
+    rain_safe: boolean
   }) => {
     const newItem = await createItem(itemData)
     setItems([newItem, ...items])
@@ -49,13 +59,7 @@ export default function Home() {
     setItems(items.filter(item => item.id !== id))
   }
 
-  const handleEditItem = async (id: string, updates: {
-    category: string
-    color: string
-    season: string
-    style: string
-    photo_url: string | null
-  }) => {
+  const handleEditItem = async (id: string, updates: Partial<Omit<Item, 'id' | 'created_at'>>) => {
     const updated = await updateItem(id, updates)
     setItems(items.map(item => item.id === id ? updated : item))
   }
@@ -78,6 +82,13 @@ export default function Home() {
 
   const handleAvailability = async (item: Item, availability: NonNullable<Item['availability']>) => {
     const updated = await updateItem(item.id, { availability })
+    setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
+  }
+
+  const handleSnooze = async (item: Item, days: number) => {
+    const date = new Date()
+    date.setDate(date.getDate() + days)
+    const updated = await updateItem(item.id, { snoozed_until: date.toISOString().slice(0, 10) })
     setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
   }
 
@@ -161,6 +172,7 @@ export default function Home() {
                 onFavorite={handleFavorite}
                 onWear={handleWear}
                 onAvailability={handleAvailability}
+                onSnooze={handleSnooze}
               />
             ))}
           </div>

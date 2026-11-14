@@ -5,28 +5,29 @@ import { Item } from '@/lib/supabase'
 import { uploadPhoto } from '@/lib/api'
 import { Camera, ImageSquare, X } from '@phosphor-icons/react'
 import { removeImageBackground } from '@/lib/background-removal'
+import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES } from '@/lib/taxonomy'
 
 type EditItemModalProps = {
   item: Item
-  onSave: (id: string, data: {
-    category: string
-    color: string
-    season: string
-    style: string
-    photo_url: string | null
-  }) => Promise<void>
+  onSave: (id: string, data: Partial<Omit<Item, 'id' | 'created_at'>>) => Promise<void>
   onClose: () => void
 }
-
-const categories = ['Верх', 'Низ', 'Обувь', 'Верхняя одежда', 'Аксессуар']
-const seasons = ['Лето', 'Зима', 'Демисезон', 'Всесезонное']
-const styles = ['Повседневный', 'Деловой', 'Спортивный', 'Нарядный']
 
 export default function EditItemModal({ item, onSave, onClose }: EditItemModalProps) {
   const [category, setCategory] = useState(item.category)
   const [color, setColor] = useState(item.color)
   const [season, setSeason] = useState(item.season)
   const [style, setStyle] = useState(item.style)
+  const [subcategory, setSubcategory] = useState(item.subcategory || '')
+  const [customName, setCustomName] = useState(item.custom_name || '')
+  const [fit, setFit] = useState(item.fit || 'Обычная')
+  const [length, setLength] = useState(item.length || '')
+  const [pattern, setPattern] = useState(item.pattern || 'Однотонная')
+  const [layerRole, setLayerRole] = useState(item.layer_role || 'Базовый слой')
+  const [comfort, setComfort] = useState(item.comfort ?? 3)
+  const [confidence, setConfidence] = useState(item.confidence ?? 3)
+  const [needsUnderlayer, setNeedsUnderlayer] = useState(Boolean(item.needs_underlayer))
+  const [rainSafe, setRainSafe] = useState(Boolean(item.rain_safe))
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(item.photo_url)
   const [loading, setLoading] = useState(false)
@@ -67,7 +68,13 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
       if (photoFile) {
         photoUrl = await uploadPhoto(photoFile)
       }
-      await onSave(item.id, { category, color, season, style, photo_url: photoUrl })
+      await onSave(item.id, {
+        category, color, season, style, photo_url: photoUrl,
+        subcategory: subcategory || null,
+        custom_name: customName.trim() || null,
+        fit, length: length || null, pattern, layer_role: layerRole,
+        comfort, confidence, needs_underlayer: needsUnderlayer, rain_safe: rainSafe,
+      })
       onClose()
     } catch (error) {
       console.error('Ошибка редактирования:', error)
@@ -102,15 +109,19 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
               <label className="mb-2 block text-sm font-semibold text-[#1e3026]">Категория</label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => { setCategory(e.target.value); setSubcategory('') }}
                 required
                 className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
               >
-                {categories.map((cat) => (
+                {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
             </div>
+
+            <div><label className="mb-2 block text-sm font-semibold text-[#1e3026]">Тип вещи</label><select value={subcategory} onChange={(e) => setSubcategory(e.target.value)} required className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3"><option value="">Выберите тип</option>{SUBCATEGORIES[category as keyof typeof SUBCATEGORIES]?.map((option) => <option key={option}>{option}</option>)}</select></div>
+
+            <div><label className="mb-2 block text-sm font-semibold text-[#1e3026]">Своё название</label><input value={customName} onChange={(e) => setCustomName(e.target.value)} maxLength={80} className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3" /></div>
 
             <div>
               <label className="mb-2 block text-sm font-semibold text-[#1e3026]">Цвет</label>
@@ -131,7 +142,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
                 required
                 className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
               >
-                {seasons.map((s) => (
+                {SEASONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -145,10 +156,25 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
                 required
                 className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
               >
-                {styles.map((st) => (
+                {STYLES.map((st) => (
                   <option key={st} value={st}>{st}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm font-semibold">Посадка<select value={fit} onChange={(e) => setFit(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{FITS.map((value) => <option key={value}>{value}</option>)}</select></label>
+              <label className="text-sm font-semibold">Принт / фактура<select value={pattern} onChange={(e) => setPattern(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{PATTERNS.map((value) => <option key={value}>{value}</option>)}</select></label>
+            </div>
+            {['Платье', 'Низ', 'Верхняя одежда'].includes(category) && <label className="block text-sm font-semibold">Длина<select value={length} onChange={(e) => setLength(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal"><option value="">Не указывать</option>{LENGTHS.map((value) => <option key={value}>{value}</option>)}</select></label>}
+            {category === 'Верх' && <label className="block text-sm font-semibold">Роль в образе<select value={layerRole} onChange={(e) => setLayerRole(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{LAYER_ROLES.map((value) => <option key={value}>{value}</option>)}</select></label>}
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm font-semibold">Комфорт (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(comfort) ? '' : comfort} onChange={(e) => setComfort(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
+              <label className="text-sm font-semibold">Уверенность (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(confidence) ? '' : confidence} onChange={(e) => setConfidence(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
+            </div>
+            <div className="space-y-2 rounded-2xl bg-[#f3ede4] p-4">
+              <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={needsUnderlayer} onChange={(e) => setNeedsUnderlayer(e.target.checked)} className="h-5 w-5" />Нужен особый нижний слой</label>
+              {(category === 'Обувь' || category === 'Верхняя одежда') && <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={rainSafe} onChange={(e) => setRainSafe(e.target.checked)} className="h-5 w-5" />Подходит для дождя</label>}
             </div>
 
             <div className="flex gap-3 pt-2">

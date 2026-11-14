@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { CATEGORIES, SEASONS, STYLES } from '@/lib/taxonomy'
+import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES } from '@/lib/taxonomy'
 import { hasValidSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { photoPath, signItemPhotos } from '@/lib/server-photos'
@@ -15,6 +15,16 @@ const ItemInput = z.object({
   warmth: z.number().int().min(1).max(5).optional(),
   formality: z.number().int().min(1).max(5).optional(),
   ai_meta: z.record(z.string(), z.unknown()).nullable().optional(),
+  subcategory: z.string().trim().min(1).max(60).nullable().optional(),
+  custom_name: z.string().trim().max(80).nullable().optional(),
+  fit: z.enum(FITS).nullable().optional(),
+  length: z.enum(LENGTHS).nullable().optional(),
+  pattern: z.enum(PATTERNS).nullable().optional(),
+  layer_role: z.enum(LAYER_ROLES).nullable().optional(),
+  comfort: z.number().int().min(1).max(5).nullable().optional(),
+  confidence: z.number().int().min(1).max(5).nullable().optional(),
+  needs_underlayer: z.boolean().optional(),
+  rain_safe: z.boolean().optional(),
 })
 
 export async function GET() {

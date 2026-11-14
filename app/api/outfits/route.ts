@@ -10,6 +10,7 @@ const OutfitInput = z.object({
     occasion: z.string().trim().max(100).nullable(),
     notes: z.string().trim().max(500).nullable(),
     rating: z.union([z.literal(-1), z.literal(1)]).nullable().optional(),
+    feedback_reasons: z.array(z.string().trim().min(1).max(80)).max(5).nullable().optional(),
   }),
   itemIds: z.array(z.string().uuid()).min(1).max(10),
 })

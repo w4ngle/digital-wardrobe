@@ -27,7 +27,7 @@ describe('recommendOutfits', () => {
       item('top', 'Верх', 'белый', 'Повседневный', 4),
       item('bottom', 'Низ', 'черный', 'Повседневный', 4),
       item('coat', 'Верхняя одежда', 'серый', 'Повседневный', 5),
-    ], { occasion: 'Прогулка', weather: 'Холодно', style: 'Повседневный' })
+    ], { occasion: 'Обычная прогулка', weather: 'Холодно', style: 'Повседневный' })
 
     expect(result.items.map((candidate) => candidate.id)).toContain('coat')
   })
@@ -47,7 +47,7 @@ describe('recommendOutfits', () => {
       item('bottom', 'Низ', 'черный'),
       item('shoes', 'Обувь', 'белый'),
       item('cap', 'Аксессуар', 'зеленый'),
-    ], { occasion: 'Прогулка', weather: 'Тепло', style: 'Повседневный' })
+    ], { occasion: 'Обычная прогулка', weather: 'Тепло', style: 'Повседневный' })
 
     expect(result.items.map((candidate) => candidate.id)).toContain('cap')
   })
@@ -97,5 +97,26 @@ describe('recommendOutfits', () => {
 
     expect(new Set(packed.map((candidate) => candidate.id)).size).toBe(packed.length)
     expect(packed.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('builds an outfit around a dress without requiring a top and bottom', () => {
+    const [result] = recommendOutfits([
+      item('dress', 'Платье', 'черный', 'Нарядный', 2),
+      item('shoes', 'Обувь', 'черный', 'Нарядный', 2),
+    ], { occasion: 'Праздник / на выход', weather: 'Тепло', style: 'Нарядный' })
+
+    expect(result.items.map((candidate) => candidate.id)).toContain('dress')
+  })
+
+  it('does not repeat a rejected combination', () => {
+    const wardrobe = [
+      item('top-1', 'Верх', 'белый'), item('top-2', 'Верх', 'серый'),
+      item('bottom-1', 'Низ', 'черный'), item('bottom-2', 'Низ', 'синий'),
+    ]
+    const [result] = recommendOutfits(wardrobe, { occasion: 'На каждый день', weather: 'Тепло', style: 'Повседневный' }, 1, {
+      itemScores: {}, rejectedCombos: [['top-1', 'bottom-1']],
+    })
+
+    expect(result.items.map((candidate) => candidate.id).sort()).not.toEqual(['bottom-1', 'top-1'])
   })
 })

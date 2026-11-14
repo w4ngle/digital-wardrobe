@@ -14,6 +14,18 @@ export type Item = {
   wear_count?: number
   last_worn_at?: string | null
   availability?: 'available' | 'laundry' | 'unavailable'
+  subcategory?: string | null
+  custom_name?: string | null
+  fit?: string | null
+  length?: string | null
+  pattern?: string | null
+  layer_role?: string | null
+  comfort?: number | null
+  confidence?: number | null
+  needs_underlayer?: boolean
+  rain_safe?: boolean
+  snoozed_until?: string | null
+  laundry_return_at?: string | null
   created_at: string
 }
 
@@ -29,6 +41,7 @@ export type Outfit = {
   is_favorite?: boolean
   planned_for?: string | null
   rating?: -1 | 1 | null
+  feedback_reasons?: string[] | null
   suggested_by?: 'owner' | 'partner' | null
   created_at: string
 }

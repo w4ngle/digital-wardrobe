@@ -25,11 +25,14 @@ export default function RecommendPage() {
   const [occasion, setOccasion] = useState<Occasion>('На каждый день')
   const [weather, setWeather] = useState<Weather>('Прохладно')
   const [style, setStyle] = useState<string>('Повседневный')
+  const [rain, setRain] = useState(false)
   const [results, setResults] = useState<OutfitRecommendation[]>([])
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState<number | null>(null)
   const [locked, setLocked] = useState<Record<number, string[]>>({})
   const [rated, setRated] = useState<Record<number, -1 | 1>>({})
+  const [dislikeIndex, setDislikeIndex] = useState<number | null>(null)
+  const [dislikeReasons, setDislikeReasons] = useState<string[]>([])
 
   useEffect(() => {
     Promise.all([getItems(), getOutfits()]).then(([loadedItems, loadedOutfits]) => {
@@ -38,16 +41,17 @@ export default function RecommendPage() {
     }).catch(() => alert('Не удалось загрузить гардероб')).finally(() => setLoading(false))
   }, [])
 
-  const preferences = ratedOutfits.reduce<Record<string, number>>((scores, outfit) => {
-    outfit.items.forEach((item) => { scores[item.id] = (scores[item.id] || 0) + (outfit.rating === 1 ? 2 : -2) })
-    return scores
-  }, {})
+  const preferences = ratedOutfits.reduce<{ itemScores: Record<string, number>, rejectedCombos: string[][] }>((learned, outfit) => {
+    if (outfit.rating === 1) outfit.items.forEach((item) => { learned.itemScores[item.id] = (learned.itemScores[item.id] || 0) + 2 })
+    if (outfit.rating === -1) learned.rejectedCombos.push(outfit.items.map((item) => item.id))
+    return learned
+  }, { itemScores: {}, rejectedCombos: [] })
 
   function handleRecommend() {
     setSaved(null)
     setLocked({})
     setRated({})
-    setResults(recommendOutfits(items, { occasion, weather, style }, 3, preferences))
+    setResults(recommendOutfits(items, { occasion, weather, style, rain }, 3, preferences))
   }
 
   function toggleLock(index: number, itemId: string) {
@@ -57,7 +61,7 @@ export default function RecommendPage() {
   function handleReplace(index: number, itemId: string) {
     if (locked[index]?.includes(itemId)) return
     setResults((current) => current.map((result, resultIndex) => resultIndex === index
-      ? replaceOutfitItem(items, result, itemId, { occasion, weather, style }, preferences)
+      ? replaceOutfitItem(items, result, itemId, { occasion, weather, style, rain }, preferences)
       : result))
   }
 
@@ -66,15 +70,17 @@ export default function RecommendPage() {
       if (resultIndex !== index) return result
       return result.items.reduce((next, item) => locked[index]?.includes(item.id)
         ? next
-        : replaceOutfitItem(items, next, item.id, { occasion, weather, style }, preferences), result)
+        : replaceOutfitItem(items, next, item.id, { occasion, weather, style, rain }, preferences), result)
     }))
   }
 
-  async function handleRate(result: OutfitRecommendation, index: number, rating: -1 | 1) {
+  async function handleRate(result: OutfitRecommendation, index: number, rating: -1 | 1, feedbackReasons?: string[]) {
     try {
-      const outfit = await createOutfit({ name: `${occasion} · ${style}`, occasion, notes: result.reason, rating }, result.items.map((item) => item.id))
+      const outfit = await createOutfit({ name: `${occasion} · ${style}`, occasion, notes: result.reason, rating, feedback_reasons: feedbackReasons || null }, result.items.map((item) => item.id))
       setRated((current) => ({ ...current, [index]: rating }))
       setRatedOutfits((current) => [...current, outfit])
+      setDislikeIndex(null)
+      setDislikeReasons([])
     } catch {
       alert('Не удалось сохранить оценку')
     }
@@ -101,6 +107,7 @@ export default function RecommendPage() {
         <section className="space-y-5 rounded-[24px] border border-[#dfd4c4] bg-[#fffaf2] p-4 sm:p-6">
           <div><h2 className="mb-3 text-sm font-semibold">Куда</h2><Choice values={OCCASIONS} value={occasion} onChange={setOccasion} /></div>
           <div><h2 className="mb-3 text-sm font-semibold">Погода</h2><Choice values={WEATHER} value={weather} onChange={setWeather} /></div>
+          <label className="flex items-center gap-3 rounded-2xl bg-[#f3ede4] p-3 text-sm font-medium"><input type="checkbox" checked={rain} onChange={(event) => setRain(event.target.checked)} className="h-5 w-5" />Ожидается дождь</label>
           <div><h2 className="mb-3 text-sm font-semibold">Настроение</h2><Choice values={STYLES} value={style} onChange={setStyle} /></div>
           <button type="button" disabled={loading || items.length < 2} onClick={handleRecommend} className="w-full rounded-full bg-[#1f422f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
             {loading ? 'Загружаем гардероб…' : 'Показать варианты'}
@@ -140,8 +147,9 @@ export default function RecommendPage() {
                 </button>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => handleRate(result, index, 1)} disabled={Boolean(rated[index])} className="flex items-center justify-center gap-2 rounded-xl border border-[#cfd9d2] px-3 py-2 text-xs font-semibold disabled:bg-[#dfe9e2]"><ThumbsUp size={16} />{rated[index] === 1 ? 'Учтено' : 'Нравится'}</button>
-                  <button type="button" onClick={() => handleRate(result, index, -1)} disabled={Boolean(rated[index])} className="flex items-center justify-center gap-2 rounded-xl border border-[#e0d0ce] px-3 py-2 text-xs font-semibold disabled:bg-[#efe3e1]"><ThumbsDown size={16} />{rated[index] === -1 ? 'Учтено' : 'Не моё'}</button>
+                  <button type="button" onClick={() => { setDislikeIndex(index); setDislikeReasons([]) }} disabled={Boolean(rated[index])} className="flex items-center justify-center gap-2 rounded-xl border border-[#e0d0ce] px-3 py-2 text-xs font-semibold disabled:bg-[#efe3e1]"><ThumbsDown size={16} />{rated[index] === -1 ? 'Учтено' : 'Не моё'}</button>
                 </div>
+                {dislikeIndex === index && <div className="mt-3 rounded-2xl bg-[#f3ede4] p-3"><p className="mb-2 text-xs font-semibold">Что не подошло?</p><div className="flex flex-wrap gap-2">{['Не нравится сочетание', 'Не по погоде', 'Не по случаю', 'Неудобно', 'Не хочу эту вещь сегодня'].map((reason) => <button type="button" key={reason} onClick={() => setDislikeReasons((current) => current.includes(reason) ? current.filter((value) => value !== reason) : [...current, reason])} className={`rounded-full px-3 py-2 text-[11px] ${dislikeReasons.includes(reason) ? 'bg-[#6f1820] text-white' : 'bg-white text-[#686258]'}`}>{reason}</button>)}</div><button type="button" onClick={() => handleRate(result, index, -1, dislikeReasons)} disabled={!dislikeReasons.length} className="mt-3 w-full rounded-xl bg-[#6f1820] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Запомнить</button></div>}
               </div>
             </article>
           ))}
