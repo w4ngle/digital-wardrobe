@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { uploadPhoto } from '@/lib/api'
 import { CATEGORIES, SEASONS, STYLES } from '@/lib/taxonomy'
 import { Camera, ImageSquare } from '@phosphor-icons/react'
+import { removeImageBackground } from '@/lib/background-removal'
 
 type ItemFormProps = {
   onSubmit: (item: {
@@ -31,6 +32,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [removingBackground, setRemovingBackground] = useState(false)
 
   // Сжатие изображения на клиенте
   const compressImage = (file: File): Promise<string> => {
@@ -68,6 +70,21 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       reader.onerror = reject
       reader.readAsDataURL(file)
     })
+  }
+
+  const handleRemoveBackground = async () => {
+    if (!photoFile) return
+    setRemovingBackground(true)
+    try {
+      const processed = await removeImageBackground(photoFile)
+      setPhotoFile(processed)
+      setPhotoPreview(URL.createObjectURL(processed))
+    } catch (error) {
+      console.error('Ошибка удаления фона:', error)
+      alert('Не удалось убрать фон. Можно сохранить исходное фото.')
+    } finally {
+      setRemovingBackground(false)
+    }
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,12 +156,15 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
           </label>
         </div>
         {photoPreview && (
-          <div className="mt-3 relative w-32 h-32">
+          <div className="mt-3 flex items-end gap-3">
+          <div className="relative h-32 w-32 bg-[linear-gradient(45deg,#eee_25%,transparent_25%),linear-gradient(-45deg,#eee_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#eee_75%),linear-gradient(-45deg,transparent_75%,#eee_75%)] bg-[length:16px_16px]">
             <img
               src={photoPreview}
               alt="Превью"
               className="h-full w-full rounded-xl border border-[#dfd4c4] object-cover"
             />
+          </div>
+          <button type="button" onClick={handleRemoveBackground} disabled={removingBackground} className="rounded-xl border border-[#cfc2b2] bg-white px-3 py-2 text-xs font-semibold text-[#1f422f] disabled:opacity-50">{removingBackground ? 'Убираю фон…' : 'Убрать фон'}</button>
           </div>
         )}
       </div>

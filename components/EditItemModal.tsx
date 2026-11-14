@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Item } from '@/lib/supabase'
 import { uploadPhoto } from '@/lib/api'
 import { Camera, ImageSquare, X } from '@phosphor-icons/react'
+import { removeImageBackground } from '@/lib/background-removal'
 
 type EditItemModalProps = {
   item: Item
@@ -29,6 +30,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(item.photo_url)
   const [loading, setLoading] = useState(false)
+  const [removingBackground, setRemovingBackground] = useState(false)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -39,6 +41,21 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
         setPhotoPreview(reader.result as string)
       }
       reader.readAsDataURL(file)
+    }
+  }
+
+  const handleRemoveBackground = async () => {
+    if (!photoFile) return
+    setRemovingBackground(true)
+    try {
+      const processed = await removeImageBackground(photoFile)
+      setPhotoFile(processed)
+      setPhotoPreview(URL.createObjectURL(processed))
+    } catch (error) {
+      console.error('Ошибка удаления фона:', error)
+      alert('Не удалось убрать фон. Можно сохранить исходное фото.')
+    } finally {
+      setRemovingBackground(false)
     }
   }
 
@@ -78,6 +95,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#1f422f] px-3 py-3 text-sm font-semibold text-white"><Camera size={18} aria-hidden />Сделать<input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="sr-only" /></label>
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#cfc2b2] px-3 py-3 text-sm font-semibold text-[#1f422f]"><ImageSquare size={18} aria-hidden />Из галереи<input type="file" accept="image/*" onChange={handleFileChange} className="sr-only" /></label>
               </div>
+              {photoFile && <button type="button" onClick={handleRemoveBackground} disabled={removingBackground} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-2.5 text-sm font-semibold text-[#1f422f] disabled:opacity-50">{removingBackground ? 'Убираю фон…' : 'Убрать фон'}</button>}
             </div>
 
             <div>
