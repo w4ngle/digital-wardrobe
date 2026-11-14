@@ -29,6 +29,7 @@ const ItemUpdate = z.object({
   snoozed_until: z.iso.date().nullable().optional(),
   laundry_return_at: z.iso.datetime().nullable().optional(),
   wears_since_wash: z.number().int().min(0).optional(),
+  unavailable_reason: z.enum(['В плохом состоянии', 'Не могу найти', 'Больше не ношу', 'Отдать или выбросить']).nullable().optional(),
 })
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

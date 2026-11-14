@@ -27,6 +27,7 @@ export type Item = {
   snoozed_until?: string | null
   laundry_return_at?: string | null
   wears_since_wash?: number
+  unavailable_reason?: string | null
   created_at: string
 }
 

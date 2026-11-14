@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createOutfit, deleteOutfit, getItems, getOutfits, updateOutfit } from '@/lib/api'
+import { createOutfit, deleteOutfit, editOutfit, getItems, getOutfits, updateOutfit } from '@/lib/api'
 import { Item, OutfitWithItems } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
-import { Heart, X } from '@phosphor-icons/react'
+import { Heart, PencilSimple, X } from '@phosphor-icons/react'
 
 export default function OutfitsPage() {
   const [outfits, setOutfits] = useState<OutfitWithItems[]>([])
@@ -19,6 +19,7 @@ export default function OutfitsPage() {
   const [role, setRole] = useState<'owner' | 'partner'>('owner')
   const [authorName, setAuthorName] = useState('')
   const [partnerMessage, setPartnerMessage] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   async function loadData() {
     const [outfitsData, itemsData] = await Promise.all([getOutfits(), getItems()])
@@ -49,11 +50,13 @@ export default function OutfitsPage() {
     if (selectedItemIds.length < 2) return
     setSaving(true)
     try {
-      await createOutfit({ name, occasion: occasion.trim() || null, notes: notes.trim() || null, suggested_by_name: role === 'partner' ? authorName.trim() : null, partner_message: role === 'partner' ? partnerMessage.trim() || null : null }, selectedItemIds)
+      if (editingId) await editOutfit(editingId, { name, occasion: occasion.trim() || null, notes: notes.trim() || null, itemIds: selectedItemIds })
+      else await createOutfit({ name, occasion: occasion.trim() || null, notes: notes.trim() || null, suggested_by_name: role === 'partner' ? authorName.trim() : null, partner_message: role === 'partner' ? partnerMessage.trim() || null : null }, selectedItemIds)
       setName('')
       setOccasion('')
       setNotes('')
       setPartnerMessage('')
+      setEditingId(null)
       setSelectedItemIds([])
       setShowForm(false)
       await loadData()
@@ -86,6 +89,10 @@ export default function OutfitsPage() {
     setOutfits((current) => current.map((candidate) => candidate.id === outfit.id ? { ...candidate, ...updated } : candidate))
   }
 
+  function startEdit(outfit: OutfitWithItems) {
+    setEditingId(outfit.id); setName(outfit.name); setOccasion(outfit.occasion || ''); setNotes(outfit.notes || ''); setSelectedItemIds(outfit.items.map((item) => item.id)); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
       <div className="mx-auto max-w-5xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
@@ -95,7 +102,7 @@ export default function OutfitsPage() {
             <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Образы</h1>
             <p className="mt-2 text-sm text-[#817b70]">{loading ? 'Загружаем…' : `${visibleOutfits.length} сохранено`}</p>
           </div>
-          <button onClick={() => setShowForm((current) => !current)} className="rounded-full bg-[#1f422f] px-4 py-3 text-sm font-medium text-white shadow-sm active:scale-95">
+          <button onClick={() => { setShowForm((current) => !current); setEditingId(null) }} className="rounded-full bg-[#1f422f] px-4 py-3 text-sm font-medium text-white shadow-sm active:scale-95">
             {showForm ? 'Закрыть' : '+ Собрать'}
           </button>
         </header>
@@ -130,7 +137,7 @@ export default function OutfitsPage() {
             </div>
 
             <button type="submit" disabled={saving || selectedItemIds.length < 2} className="mt-5 w-full rounded-xl bg-[#26372f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
-              {saving ? 'Сохраняем…' : selectedItemIds.length < 2 ? 'Выберите минимум 2 вещи' : 'Сохранить образ'}
+              {saving ? 'Сохраняем…' : selectedItemIds.length < 2 ? 'Выберите минимум 2 вещи' : editingId ? 'Сохранить изменения' : 'Сохранить образ'}
             </button>
           </form>
         )}
@@ -146,6 +153,7 @@ export default function OutfitsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><h2 className="truncate font-semibold">{outfit.name}</h2><p className="mt-1 truncate text-xs text-[#817b70]">{outfit.suggested_by === 'partner' ? '💌 Предложение от любимого' : outfit.occasion || `${outfit.items.length} вещи`}</p></div>
                     <div className="flex shrink-0 gap-2">
+                      {role === 'owner' && <button onClick={() => startEdit(outfit)} className="text-[#52635a]" aria-label="Изменить образ"><PencilSimple size={20} /></button>}
                       <button onClick={() => handleFavorite(outfit)} className="text-[#6f1820]" aria-label={outfit.is_favorite ? 'Убрать из избранного' : 'Добавить в избранное'}><Heart size={20} weight={outfit.is_favorite ? 'fill' : 'regular'} aria-hidden /></button>
                       <button onClick={() => handleDelete(outfit.id)} className="text-[#6f1820]" aria-label="Удалить образ"><X size={20} aria-hidden /></button>
                     </div>

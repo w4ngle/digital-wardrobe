@@ -68,6 +68,10 @@ export function updateOutfit(id: string, updates: Pick<Partial<Outfit>, 'is_favo
   })
 }
 
+export function editOutfit(id: string, updates: Pick<Outfit, 'name' | 'occasion' | 'notes'> & { itemIds: string[] }) {
+  return api<Outfit>(`/api/outfits/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) })
+}
+
 export function getTrips() { return api<Trip[]>('/api/trips') }
 
 export function createTrip(trip: Omit<Trip, 'id' | 'created_at'>) {

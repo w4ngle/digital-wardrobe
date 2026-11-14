@@ -11,11 +11,12 @@ type ItemCardProps = {
   onWear: (item: Item) => Promise<void>
   onAvailability: (item: Item, availability: NonNullable<Item['availability']>) => Promise<void>
   onSnooze: (item: Item, days: number) => Promise<void>
+  onUnavailableReason: (item: Item, reason: string | null) => Promise<void>
 }
 
 const availabilityLabels = { available: 'Доступна', laundry: 'В стирке', unavailable: 'Недоступна' } as const
 
-export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, onAvailability, onSnooze }: ItemCardProps) {
+export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, onAvailability, onSnooze, onUnavailableReason }: ItemCardProps) {
   const handleDelete = async () => {
     if (!confirm('Удалить эту вещь?')) return
     try {
@@ -86,6 +87,7 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
             {Object.entries(availabilityLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
+        {item.availability === 'unavailable' && <label className="mt-2 block text-[10px] font-medium text-[#817b70]">Почему<select value={item.unavailable_reason || ''} onChange={(event) => onUnavailableReason(item, event.target.value || null)} className="mt-1 w-full rounded-xl border border-[#ddd7cc] bg-white px-2 py-2 text-xs text-[#52635a]"><option value="">Выберите причину</option>{['В плохом состоянии', 'Не могу найти', 'Больше не ношу', 'Отдать или выбросить'].map((reason) => <option key={reason}>{reason}</option>)}</select></label>}
         <label className="mt-2 block text-[10px] font-medium text-[#817b70]">Не предлагать<select value="" onChange={(event) => { if (event.target.value) void onSnooze(item, Number(event.target.value)); event.target.value = '' }} className="mt-1 w-full rounded-xl border border-[#ddd7cc] bg-white px-2 py-2 text-xs text-[#52635a]"><option value="">Выбрать срок</option><option value="3">3 дня</option><option value="7">Неделю</option><option value="30">Месяц</option></select></label>
       </div>
     </article>

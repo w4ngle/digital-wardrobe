@@ -98,6 +98,11 @@ export default function Home() {
     setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
   }
 
+  const handleUnavailableReason = async (item: Item, unavailable_reason: string | null) => {
+    const updated = await updateItem(item.id, { unavailable_reason })
+    setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
+  }
+
   const filteredItems = items.filter(item => {
     if (filterCategory && item.category !== filterCategory) return false
     if (filterSeason && item.season !== filterSeason) return false
@@ -179,6 +184,7 @@ export default function Home() {
                 onWear={handleWear}
                 onAvailability={handleAvailability}
                 onSnooze={handleSnooze}
+                onUnavailableReason={handleUnavailableReason}
               />
             ))}
           </div>
