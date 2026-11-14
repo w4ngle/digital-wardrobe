@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createOutfit, getItems, getOutfits } from '@/lib/api'
+import { createOutfit, getItems, getOutfits, updateItem } from '@/lib/api'
 import { Item, OutfitWithItems } from '@/lib/supabase'
 import { OCCASIONS, WEATHER, Occasion, OutfitRecommendation, Weather, recommendOutfits, replaceOutfitItem } from '@/lib/recommendations'
 import { STYLES } from '@/lib/taxonomy'
@@ -26,6 +26,9 @@ export default function RecommendPage() {
   const [weather, setWeather] = useState<Weather>('Прохладно')
   const [style, setStyle] = useState<string>('Повседневный')
   const [rain, setRain] = useState(false)
+  const [transport, setTransport] = useState<'Пешком' | 'Автобус' | 'Такси'>('Автобус')
+  const [requiredItemId, setRequiredItemId] = useState('')
+  const [rediscover, setRediscover] = useState(false)
   const [results, setResults] = useState<OutfitRecommendation[]>([])
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState<number | null>(null)
@@ -51,7 +54,7 @@ export default function RecommendPage() {
     setSaved(null)
     setLocked({})
     setRated({})
-    setResults(recommendOutfits(items, { occasion, weather, style, rain }, 3, preferences))
+    setResults(recommendOutfits(items, { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover }, 3, preferences))
   }
 
   function toggleLock(index: number, itemId: string) {
@@ -61,7 +64,7 @@ export default function RecommendPage() {
   function handleReplace(index: number, itemId: string) {
     if (locked[index]?.includes(itemId)) return
     setResults((current) => current.map((result, resultIndex) => resultIndex === index
-      ? replaceOutfitItem(items, result, itemId, { occasion, weather, style, rain }, preferences)
+      ? replaceOutfitItem(items, result, itemId, { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover }, preferences)
       : result))
   }
 
@@ -70,8 +73,17 @@ export default function RecommendPage() {
       if (resultIndex !== index) return result
       return result.items.reduce((next, item) => locked[index]?.includes(item.id)
         ? next
-        : replaceOutfitItem(items, next, item.id, { occasion, weather, style, rain }, preferences), result)
+        : replaceOutfitItem(items, next, item.id, { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover }, preferences), result)
     }))
+  }
+
+  async function snoozeItem(item: Item) {
+    const date = new Date(); date.setDate(date.getDate() + 3)
+    try {
+      await updateItem(item.id, { snoozed_until: date.toISOString().slice(0, 10) })
+      setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, snoozed_until: date.toISOString().slice(0, 10) } : candidate))
+      setResults((current) => current.filter((result) => !result.items.some((candidate) => candidate.id === item.id)))
+    } catch { alert('Не удалось отложить вещь') }
   }
 
   async function handleRate(result: OutfitRecommendation, index: number, rating: -1 | 1, feedbackReasons?: string[]) {
@@ -108,7 +120,10 @@ export default function RecommendPage() {
           <div><h2 className="mb-3 text-sm font-semibold">Куда</h2><Choice values={OCCASIONS} value={occasion} onChange={setOccasion} /></div>
           <div><h2 className="mb-3 text-sm font-semibold">Погода</h2><Choice values={WEATHER} value={weather} onChange={setWeather} /></div>
           <label className="flex items-center gap-3 rounded-2xl bg-[#f3ede4] p-3 text-sm font-medium"><input type="checkbox" checked={rain} onChange={(event) => setRain(event.target.checked)} className="h-5 w-5" />Ожидается дождь</label>
+          <div><h2 className="mb-3 text-sm font-semibold">Как добираемся</h2><Choice values={['Пешком', 'Автобус', 'Такси'] as const} value={transport} onChange={setTransport} /></div>
           <div><h2 className="mb-3 text-sm font-semibold">Настроение</h2><Choice values={STYLES} value={style} onChange={setStyle} /></div>
+          <label className="block text-sm font-semibold">Собрать с конкретной вещью<select value={requiredItemId} onChange={(event) => setRequiredItemId(event.target.value)} className="mt-2 w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-3 font-normal"><option value="">Не важно</option>{items.map((item) => <option key={item.id} value={item.id}>{item.custom_name || item.description || `${item.subcategory || item.category} · ${item.color}`}</option>)}</select></label>
+          <label className="flex items-center gap-3 rounded-2xl bg-[#f3ede4] p-3 text-sm font-medium"><input type="checkbox" checked={rediscover} onChange={(event) => setRediscover(event.target.checked)} className="h-5 w-5" />Добавить вещи, которые давно не носились</label>
           <button type="button" disabled={loading || items.length < 2} onClick={handleRecommend} className="w-full rounded-full bg-[#1f422f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
             {loading ? 'Загружаем гардероб…' : 'Показать варианты'}
           </button>
@@ -132,6 +147,7 @@ export default function RecommendPage() {
                       <span className="truncate text-[9px] font-semibold">{item.category}</span>
                       <div className="flex shrink-0">
                         <button type="button" onClick={() => handleReplace(index, item.id)} disabled={isLocked} className="p-1 disabled:opacity-30" aria-label="Заменить вещь"><ArrowsClockwise size={15} /></button>
+                        <button type="button" onClick={() => snoozeItem(item)} className="p-1 text-[#8a645a]" aria-label="Не предлагать вещь три дня">×</button>
                         <button type="button" onClick={() => toggleLock(index, item.id)} className="p-1" aria-label={isLocked ? 'Открепить вещь' : 'Закрепить вещь'}>{isLocked ? <Lock size={15} weight="fill" /> : <LockOpen size={15} />}</button>
                       </div>
                     </div>

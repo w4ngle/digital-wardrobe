@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS wear_history (
   worn_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   laundry_decision TEXT CHECK (laundry_decision IN ('keep', 'laundry'))
 );
+ALTER TABLE wear_history ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE outfits
   ADD COLUMN IF NOT EXISTS suggested_by_name TEXT,
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS trips (
   checklist JSONB NOT NULL DEFAULT '[]',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS wear_history_item_worn_at_idx ON wear_history(item_id, worn_at DESC);
 NOTIFY pgrst, 'reload schema';

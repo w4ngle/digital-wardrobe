@@ -11,6 +11,9 @@ export type OutfitRequest = {
   weather: Weather
   style: string
   rain?: boolean
+  transport?: 'Пешком' | 'Автобус' | 'Такси'
+  requiredItemId?: string
+  rediscover?: boolean
 }
 
 export type OutfitRecommendation = {
@@ -93,7 +96,10 @@ function itemScore(item: Item, request: OutfitRequest, preferences: OutfitPrefer
   const scores = learnedPreferences(preferences).itemScores
   const comfort = (item.comfort || 3) - 3
   const confidence = (item.confidence || 3) - 3
-  return style + warmth + formality + comfort + confidence + (scores[item.id] || 0)
+  const activeComfort = request.transport === 'Пешком' || request.transport === 'Автобус' ? comfort * 2 : comfort
+  const daysSinceWorn = item.last_worn_at ? (Date.now() - new Date(item.last_worn_at).getTime()) / 86400000 : 90
+  const rediscover = request.rediscover ? Math.min(4, daysSinceWorn / 30) : 0
+  return style + warmth + formality + activeComfort + confidence + rediscover + (scores[item.id] || 0)
 }
 
 function buildReason(request: OutfitRequest, hasOuterwear: boolean) {
@@ -136,6 +142,7 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
           for (const secondLayer of secondLayers) {
           for (const extra of extras) {
             const outfit = [...core, shoe, secondLayer, layer, extra].filter((item): item is Item => item !== null)
+            if (request.requiredItemId && !outfit.some((item) => item.id === request.requiredItemId)) continue
             const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request, preferences), 0)
             const colors = core.length > 1 ? colorScore(core[0].color, core[1].color) : 2
             const coldLayerPenalty = request.weather === 'Холодно' && !layer ? -5 : 0
@@ -157,6 +164,8 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
       .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))
       .filter((item, index, sorted) => sorted.findIndex((candidate) => candidate.category === item.category) === index)
       .slice(0, 4)
+    const required = request.requiredItemId && availableItems.find((item) => item.id === request.requiredItemId)
+    if (required && !fallback.some((item) => item.id === required.id)) fallback.unshift(required)
     return fallback.length >= 2 ? [{
       items: fallback,
       score: fallback.reduce((sum, item) => sum + itemScore(item, request, preferences), 0),
