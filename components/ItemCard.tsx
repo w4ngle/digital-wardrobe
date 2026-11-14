@@ -41,7 +41,7 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
         )}
 
         <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-8rem)] truncate rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#4d4941] shadow-sm backdrop-blur">
-          {item.subcategory || item.category}
+          {item.ai_meta?.demo === true ? 'Демо · ' : ''}{item.subcategory || item.category}
         </span>
 
         <div className="absolute right-2.5 top-2.5 flex gap-1.5">

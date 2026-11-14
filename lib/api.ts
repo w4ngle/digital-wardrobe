@@ -40,6 +40,8 @@ export function deleteItem(id: string) {
   return api<void>(`/api/items/${id}`, { method: 'DELETE' })
 }
 
+export function clearDemoItems() { return api<void>('/api/demo-items', { method: 'DELETE' }) }
+
 export function markItemWorn(id: string) {
   return api<Item>(`/api/items/${id}/wear`, { method: 'POST' })
 }

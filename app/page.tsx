@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getItems, createItem, deleteItem, updateItem, markItemWorn } from '@/lib/api'
+import { getItems, createItem, deleteItem, updateItem, markItemWorn, clearDemoItems } from '@/lib/api'
 import { Item } from '@/lib/supabase'
 import ItemCard from '@/components/ItemCard'
 import ItemForm from '@/components/ItemForm'
@@ -17,6 +17,7 @@ export default function Home() {
   const [filterSeason, setFilterSeason] = useState('')
   const [filterStyle, setFilterStyle] = useState('')
   const [editingItem, setEditingItem] = useState<Item | null>(null)
+  const demoItems = items.filter((item) => item.ai_meta?.demo === true)
 
   useEffect(() => {
     getItems()
@@ -103,6 +104,12 @@ export default function Home() {
     setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
   }
 
+  const handleClearDemo = async () => {
+    if (!confirm('Удалить все демонстрационные вещи? Настоящие вещи останутся.')) return
+    await clearDemoItems()
+    setItems((current) => current.filter((item) => item.ai_meta?.demo !== true))
+  }
+
   const filteredItems = items.filter(item => {
     if (filterCategory && item.category !== filterCategory) return false
     if (filterSeason && item.season !== filterSeason) return false
@@ -145,6 +152,8 @@ export default function Home() {
             />
           </div>
         )}
+
+        {!loading && demoItems.length > 0 && <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl bg-[#e5ece7] px-4 py-3 text-xs text-[#52635a]"><span>Демо-гардероб: {demoItems.length} вещей для знакомства с приложением</span><button type="button" onClick={handleClearDemo} className="shrink-0 font-semibold underline">Очистить</button></div>}
 
         <ItemFilters
           category={filterCategory}
