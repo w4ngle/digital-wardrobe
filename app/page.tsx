@@ -81,7 +81,13 @@ export default function Home() {
   }
 
   const handleAvailability = async (item: Item, availability: NonNullable<Item['availability']>) => {
-    const updated = await updateItem(item.id, { availability })
+    const returnAt = new Date()
+    returnAt.setDate(returnAt.getDate() + 2)
+    const updated = await updateItem(item.id, {
+      availability,
+      laundry_return_at: availability === 'laundry' ? returnAt.toISOString() : null,
+      ...(availability === 'available' ? { wears_since_wash: 0 } : {}),
+    })
     setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
   }
 

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
+  currentTelegramUserId,
+  allowedTelegramUserIds,
   createSession,
   hasValidSession,
   telegramSession,
@@ -7,8 +9,9 @@ import {
 } from '@/lib/telegram-auth'
 
 export async function GET() {
-  const authorized = await hasValidSession()
-  return NextResponse.json({ authorized }, {
+  const userId = await currentTelegramUserId()
+  const authorized = Boolean(userId)
+  return NextResponse.json({ authorized, role: userId === allowedTelegramUserIds()[0] ? 'owner' : 'partner' }, {
     status: authorized ? 200 : 401,
   })
 }

@@ -16,6 +16,9 @@ export default function OutfitsPage() {
   const [occasion, setOccasion] = useState('')
   const [notes, setNotes] = useState('')
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
+  const [role, setRole] = useState<'owner' | 'partner'>('owner')
+  const [authorName, setAuthorName] = useState('')
+  const [partnerMessage, setPartnerMessage] = useState('')
 
   async function loadData() {
     const [outfitsData, itemsData] = await Promise.all([getOutfits(), getItems()])
@@ -24,6 +27,7 @@ export default function OutfitsPage() {
   }
 
   useEffect(() => {
+    fetch('/api/auth/telegram').then((response) => response.json()).then((session) => setRole(session.role || 'owner')).catch(() => undefined)
     Promise.all([getOutfits(), getItems()])
       .then(([outfitsData, itemsData]) => {
         setOutfits(outfitsData)
@@ -45,10 +49,11 @@ export default function OutfitsPage() {
     if (selectedItemIds.length < 2) return
     setSaving(true)
     try {
-      await createOutfit({ name, occasion: occasion.trim() || null, notes: notes.trim() || null }, selectedItemIds)
+      await createOutfit({ name, occasion: occasion.trim() || null, notes: notes.trim() || null, suggested_by_name: role === 'partner' ? authorName.trim() : null, partner_message: role === 'partner' ? partnerMessage.trim() || null : null }, selectedItemIds)
       setName('')
       setOccasion('')
       setNotes('')
+      setPartnerMessage('')
       setSelectedItemIds([])
       setShowForm(false)
       await loadData()
@@ -72,6 +77,12 @@ export default function OutfitsPage() {
 
   async function handlePlan(outfit: OutfitWithItems, planned_for: string) {
     const updated = await updateOutfit(outfit.id, { planned_for: planned_for || null })
+    setOutfits((current) => current.map((candidate) => candidate.id === outfit.id ? { ...candidate, ...updated } : candidate))
+  }
+
+  async function handleProposal(outfit: OutfitWithItems, proposal_status: 'accepted' | 'declined' | 'will_wear') {
+    const owner_reaction = proposal_status === 'accepted' ? 'Нравится 🤍' : proposal_status === 'will_wear' ? 'Надену ✨' : 'Не в этот раз'
+    const updated = await updateOutfit(outfit.id, { proposal_status, owner_reaction })
     setOutfits((current) => current.map((candidate) => candidate.id === outfit.id ? { ...candidate, ...updated } : candidate))
   }
 
@@ -99,6 +110,7 @@ export default function OutfitsPage() {
                 <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} placeholder="Название образа" className="w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#65786d]" />
                 <input value={occasion} onChange={(e) => setOccasion(e.target.value)} maxLength={100} placeholder="Куда пойдёте?" className="w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#65786d]" />
                 <input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} placeholder="Записка к образу" className="w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#65786d]" />
+                {role === 'partner' && <><input value={authorName} onChange={(e) => setAuthorName(e.target.value)} required maxLength={60} placeholder="Твоё имя" className="w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-2.5 text-sm" /><input value={partnerMessage} onChange={(e) => setPartnerMessage(e.target.value)} maxLength={300} placeholder="Короткое сообщение" className="w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-2.5 text-sm" /></>}
                 <p className="text-xs text-[#817b70]">Выбрано: {selectedItems.length}</p>
               </div>
             </div>
@@ -139,6 +151,7 @@ export default function OutfitsPage() {
                     </div>
                   </div>
                   {outfit.notes && <p className="mt-3 line-clamp-2 text-xs leading-5 text-[#746e64]">{outfit.notes}</p>}
+                  {outfit.suggested_by === 'partner' && <div className="mt-3 rounded-xl bg-[#f3ede4] p-3 text-xs"><p className="font-semibold">От {outfit.suggested_by_name || 'любимого'}</p>{outfit.partner_message && <p className="mt-1 text-[#746e64]">{outfit.partner_message}</p>}{role === 'owner' && outfit.proposal_status === 'pending' ? <div className="mt-3 grid grid-cols-3 gap-1"><button onClick={() => handleProposal(outfit, 'accepted')} className="rounded-lg bg-white px-2 py-2">Нравится</button><button onClick={() => handleProposal(outfit, 'will_wear')} className="rounded-lg bg-[#1f422f] px-2 py-2 text-white">Надену</button><button onClick={() => handleProposal(outfit, 'declined')} className="rounded-lg bg-white px-2 py-2">Не сейчас</button></div> : <p className="mt-2 font-medium">{outfit.owner_reaction || (outfit.proposal_status === 'pending' ? 'Ждёт ответа' : '')}</p>}</div>}
                   <label className="mt-3 block text-[10px] font-semibold uppercase tracking-wide text-[#817b70]">
                     Запланировать
                     <input type="date" value={outfit.planned_for || ''} onChange={(event) => handlePlan(outfit, event.target.value)} className="mt-1 w-full rounded-lg border border-[#ddd7cc] bg-white px-2 py-2 text-xs font-normal normal-case tracking-normal" />

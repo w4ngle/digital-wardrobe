@@ -28,6 +28,7 @@ const ItemUpdate = z.object({
   rain_safe: z.boolean().optional(),
   snoozed_until: z.iso.date().nullable().optional(),
   laundry_return_at: z.iso.datetime().nullable().optional(),
+  wears_since_wash: z.number().int().min(0).optional(),
 })
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

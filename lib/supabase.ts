@@ -26,6 +26,7 @@ export type Item = {
   rain_safe?: boolean
   snoozed_until?: string | null
   laundry_return_at?: string | null
+  wears_since_wash?: number
   created_at: string
 }
 
@@ -43,6 +44,10 @@ export type Outfit = {
   rating?: -1 | 1 | null
   feedback_reasons?: string[] | null
   suggested_by?: 'owner' | 'partner' | null
+  suggested_by_name?: string | null
+  partner_message?: string | null
+  proposal_status?: 'saved' | 'pending' | 'accepted' | 'declined' | 'will_wear'
+  owner_reaction?: string | null
   created_at: string
 }
 

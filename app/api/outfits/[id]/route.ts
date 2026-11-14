@@ -7,6 +7,8 @@ const OutfitUpdate = z.object({
   is_favorite: z.boolean().optional(),
   planned_for: z.iso.date().nullable().optional(),
   rating: z.union([z.literal(-1), z.literal(1)]).nullable().optional(),
+  proposal_status: z.enum(['saved', 'pending', 'accepted', 'declined', 'will_wear']).optional(),
+  owner_reaction: z.string().trim().max(200).nullable().optional(),
 })
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

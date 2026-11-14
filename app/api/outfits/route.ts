@@ -11,6 +11,8 @@ const OutfitInput = z.object({
     notes: z.string().trim().max(500).nullable(),
     rating: z.union([z.literal(-1), z.literal(1)]).nullable().optional(),
     feedback_reasons: z.array(z.string().trim().min(1).max(80)).max(5).nullable().optional(),
+    suggested_by_name: z.string().trim().min(1).max(60).nullable().optional(),
+    partner_message: z.string().trim().max(300).nullable().optional(),
   }),
   itemIds: z.array(z.string().uuid()).min(1).max(10),
 })
@@ -42,7 +44,8 @@ export async function POST(request: NextRequest) {
 
   const admin = getSupabaseAdmin()
   const suggested_by = userId === allowedTelegramUserIds()[0] ? 'owner' : 'partner'
-  const { data: outfit, error } = await admin.from('outfits').insert({ ...parsed.data.outfit, suggested_by }).select().single()
+  const proposal_status = suggested_by === 'partner' ? 'pending' : 'saved'
+  const { data: outfit, error } = await admin.from('outfits').insert({ ...parsed.data.outfit, suggested_by, proposal_status }).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const links = parsed.data.itemIds.map((item_id) => ({ outfit_id: outfit.id, item_id }))
@@ -53,5 +56,15 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: items } = await admin.from('items').select('*').in('id', parsed.data.itemIds)
+
+  if (suggested_by === 'partner' && process.env.TELEGRAM_BOT_TOKEN && allowedTelegramUserIds()[0]) {
+    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        chat_id: allowedTelegramUserIds()[0],
+        text: `Тебе предложили новый образ 💌\n\n${parsed.data.outfit.suggested_by_name || 'Любимый'}: ${parsed.data.outfit.partner_message || parsed.data.outfit.name}`,
+        reply_markup: { inline_keyboard: [[{ text: 'Посмотреть', web_app: { url: 'https://digital-wardrobe-gilt.vercel.app/outfits' } }]] },
+      }),
+    })
+  }
   return NextResponse.json({ ...outfit, items: await signItemPhotos(items || []) }, { status: 201 })
 }
