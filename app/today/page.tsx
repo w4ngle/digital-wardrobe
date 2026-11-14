@@ -34,9 +34,10 @@ export default function TodayPage() {
   }, [])
 
   const favoriteItems = items.filter((item) => item.is_favorite)
-  const favoriteOutfits = outfits.filter((outfit) => outfit.is_favorite || outfit.rating === 1)
-  const planned = outfits.filter((outfit) => outfit.planned_for).sort((a, b) => a.planned_for!.localeCompare(b.planned_for!))
-  const heroOutfit = planned[0] || favoriteOutfits[0] || outfits[0]
+  const usableOutfits = outfits.filter((outfit) => outfit.rating !== -1)
+  const favoriteOutfits = usableOutfits.filter((outfit) => outfit.is_favorite || outfit.rating === 1)
+  const planned = usableOutfits.filter((outfit) => outfit.planned_for).sort((a, b) => a.planned_for!.localeCompare(b.planned_for!))
+  const heroOutfit = planned[0] || favoriteOutfits[0] || usableOutfits[0]
   const totalWears = items.reduce((sum, item) => sum + (item.wear_count || 0), 0)
   const mostWorn = [...items].sort((a, b) => (b.wear_count || 0) - (a.wear_count || 0))[0]
   const categoryCount = useMemo(() => items.reduce<Record<string, number>>((result, item) => {

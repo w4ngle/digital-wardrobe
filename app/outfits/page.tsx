@@ -34,6 +34,7 @@ export default function OutfitsPage() {
   }, [])
 
   const selectedItems = allItems.filter((item) => selectedItemIds.includes(item.id))
+  const visibleOutfits = outfits.filter((outfit) => outfit.rating !== -1)
 
   function toggleItem(id: string) {
     setSelectedItemIds((current) => current.includes(id) ? current.filter((itemId) => itemId !== id) : [...current, id])
@@ -81,7 +82,7 @@ export default function OutfitsPage() {
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#817b70]">Мои сочетания</p>
             <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Образы</h1>
-            <p className="mt-2 text-sm text-[#817b70]">{loading ? 'Загружаем…' : `${outfits.length} сохранено`}</p>
+            <p className="mt-2 text-sm text-[#817b70]">{loading ? 'Загружаем…' : `${visibleOutfits.length} сохранено`}</p>
           </div>
           <button onClick={() => setShowForm((current) => !current)} className="rounded-full bg-[#1f422f] px-4 py-3 text-sm font-medium text-white shadow-sm active:scale-95">
             {showForm ? 'Закрыть' : '+ Собрать'}
@@ -124,9 +125,9 @@ export default function OutfitsPage() {
 
         {loading ? (
           <div className="grid grid-cols-2 gap-4"><div className="aspect-[4/5] animate-pulse rounded-[24px] bg-[#e6e1d8]" /><div className="aspect-[4/5] animate-pulse rounded-[24px] bg-[#e6e1d8]" /></div>
-        ) : outfits.length ? (
+        ) : visibleOutfits.length ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6">
-            {outfits.map((outfit) => (
+            {visibleOutfits.map((outfit) => (
               <article key={outfit.id} className="overflow-hidden rounded-[24px] bg-[#faf8f4] shadow-[0_8px_24px_rgba(41,37,31,0.06)]">
                 <OutfitCollage items={outfit.items} />
                 <div className="p-4">

@@ -61,6 +61,15 @@ export default function RecommendPage() {
       : result))
   }
 
+  function refreshUnlocked(index: number) {
+    setResults((current) => current.map((result, resultIndex) => {
+      if (resultIndex !== index) return result
+      return result.items.reduce((next, item) => locked[index]?.includes(item.id)
+        ? next
+        : replaceOutfitItem(items, next, item.id, { occasion, weather, style }, preferences), result)
+    }))
+  }
+
   async function handleRate(result: OutfitRecommendation, index: number, rating: -1 | 1) {
     try {
       const outfit = await createOutfit({ name: `${occasion} · ${style}`, occasion, notes: result.reason, rating }, result.items.map((item) => item.id))
@@ -125,7 +134,8 @@ export default function RecommendPage() {
               <div className="p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#65786d]">Вариант {index + 1}</p>
                 <p className="mt-2 text-sm leading-6 text-[#686258]">{result.reason}</p>
-                <button type="button" onClick={() => handleSave(result, index)} disabled={saved === index} className="mt-4 w-full rounded-xl bg-[#ece7dd] px-4 py-3 text-sm font-semibold text-[#3f4f46] disabled:bg-[#dfe9e2]">
+                <button type="button" onClick={() => refreshUnlocked(index)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#d8d1c6] bg-white px-4 py-3 text-sm font-semibold text-[#3f4f46]"><ArrowsClockwise size={17} />Обновить незакреплённые</button>
+                <button type="button" onClick={() => handleSave(result, index)} disabled={saved === index} className="mt-2 w-full rounded-xl bg-[#ece7dd] px-4 py-3 text-sm font-semibold text-[#3f4f46] disabled:bg-[#dfe9e2]">
                   {saved === index ? '✓ Сохранено' : 'Сохранить образ'}
                 </button>
                 <div className="mt-2 grid grid-cols-2 gap-2">
