@@ -3,7 +3,6 @@ import {
   currentTelegramUserId,
   allowedTelegramUserIds,
   createSession,
-  hasValidSession,
   telegramSession,
   validateTelegramInitData,
 } from '@/lib/telegram-auth'

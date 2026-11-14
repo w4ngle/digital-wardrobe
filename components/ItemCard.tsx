@@ -79,6 +79,7 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
         <button onClick={() => onWear(item)} className="mt-3 w-full rounded-xl bg-[#eee9df] px-2 py-2 text-xs font-medium text-[#52635a] active:scale-[0.98]">
           Надел сегодня{item.wear_count ? ` · ${item.wear_count}` : ''}
         </button>
+        {item.subcategory === 'Джинсы' && (item.wears_since_wash || 0) >= 4 && <p className="mt-2 rounded-lg bg-[#f3e4dd] px-2 py-1.5 text-[10px] text-[#6f1820]">Пора освежить после {item.wears_since_wash} носок</p>}
         <label className="mt-2 block text-[10px] font-medium text-[#817b70]">
           Сейчас
           <select value={item.availability || 'available'} onChange={(event) => onAvailability(item, event.target.value as NonNullable<Item['availability']>)} className="mt-1 w-full rounded-xl border border-[#ddd7cc] bg-white px-2 py-2 text-xs text-[#52635a]">

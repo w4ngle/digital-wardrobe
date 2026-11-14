@@ -30,7 +30,9 @@ const ItemInput = z.object({
 export async function GET() {
   if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
 
-  const { data, error } = await getSupabaseAdmin()
+  const admin = getSupabaseAdmin()
+  await admin.from('items').update({ availability: 'available', laundry_return_at: null, wears_since_wash: 0 }).eq('availability', 'laundry').lte('laundry_return_at', new Date().toISOString())
+  const { data, error } = await admin
     .from('items')
     .select('*')
     .order('created_at', { ascending: false })

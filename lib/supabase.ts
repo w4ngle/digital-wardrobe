@@ -61,3 +61,12 @@ export type OutfitItem = {
 export type OutfitWithItems = Outfit & {
   items: Item[]
 }
+
+export type Trip = {
+  id: string
+  name: string
+  details: Record<string, unknown>
+  packed_item_ids: string[]
+  checklist: Array<{ label: string, checked: boolean }>
+  created_at: string
+}

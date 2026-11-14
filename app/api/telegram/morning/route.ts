@@ -1,5 +1,5 @@
 import { appUrl, morningOutfitMessage } from '@/lib/bot-messages'
-import { recommendOutfit } from '@/lib/recommendations'
+import { recommendOutfits, Weather } from '@/lib/recommendations'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET(request: Request) {
@@ -15,9 +15,15 @@ export async function GET(request: Request) {
   const { data: items, error } = await getSupabaseAdmin().from('items').select('*')
   if (error) return new Response(error.message, { status: 500 })
 
-  const month = new Date().getUTCMonth() + 1
-  const season = month >= 12 || month <= 2 ? 'Зима' : month >= 6 && month <= 8 ? 'Лето' : 'Демисезон'
-  const outfit = recommendOutfit(items || [], season, 'Повседневный')
+  let weather: Weather = 'Прохладно'
+  let rain = false
+  try {
+    const forecast = await fetch('https://api.open-meteo.com/v1/forecast?latitude=47.2357&longitude=39.7015&current=temperature_2m,weather_code&daily=temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=Europe%2FMoscow').then((response) => response.json())
+    const temperature = forecast.current.temperature_2m
+    weather = temperature >= 20 ? 'Тепло' : temperature <= 5 ? 'Холодно' : 'Прохладно'
+    rain = forecast.current.weather_code >= 51 || forecast.daily.precipitation_probability_max[0] >= 50
+  } catch { /* use seasonal-neutral fallback */ }
+  const outfit = recommendOutfits(items || [], { occasion: 'На каждый день', weather, style: 'Повседневный', rain }, 1)[0] ?? null
   if (!outfit) return Response.json({ ok: true, skipped: 'not enough items' })
 
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

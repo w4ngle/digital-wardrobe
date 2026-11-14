@@ -1,4 +1,4 @@
-import { Item, Outfit, OutfitWithItems } from '@/lib/supabase'
+import { Item, Outfit, OutfitWithItems, Trip } from '@/lib/supabase'
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
@@ -66,4 +66,10 @@ export function updateOutfit(id: string, updates: Pick<Partial<Outfit>, 'is_favo
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
   })
+}
+
+export function getTrips() { return api<Trip[]>('/api/trips') }
+
+export function createTrip(trip: Omit<Trip, 'id' | 'created_at'>) {
+  return api<Trip>('/api/trips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trip) })
 }

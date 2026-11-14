@@ -200,7 +200,7 @@ export function replaceOutfitItem(items: Item[], result: OutfitRecommendation, i
 }
 
 export function buildPackingList(items: Item[], request: OutfitRequest, days: number) {
-  const outfits = recommendOutfits(items, request, Math.min(Math.max(days, 2), 6))
+  const outfits = recommendOutfits(items, request, Math.min(Math.max(days, 2), 14))
   const packed = new Map<string, Item>()
   outfits.forEach((outfit) => outfit.items.forEach((item) => packed.set(item.id, item)))
   return [...packed.values()]
