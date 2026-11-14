@@ -70,3 +70,5 @@ export type Trip = {
   checklist: Array<{ label: string, checked: boolean }>
   created_at: string
 }
+
+export type WearRecord = { id: string, worn_at: string, laundry_decision: 'keep' | 'laundry' | null, item: Item | null }

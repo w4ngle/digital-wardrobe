@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { getItems, getOutfits } from '@/lib/api'
-import { Item, OutfitWithItems } from '@/lib/supabase'
+import { getItems, getOutfits, getWearHistory } from '@/lib/api'
+import { Item, OutfitWithItems, WearRecord } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
 import { Cloud, Sparkle } from '@phosphor-icons/react'
 
@@ -23,12 +23,14 @@ export default function TodayPage() {
   const [outfits, setOutfits] = useState<OutfitWithItems[]>([])
   const [weather, setWeather] = useState<Weather | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
+  const [history, setHistory] = useState<WearRecord[]>([])
 
   useEffect(() => {
-    Promise.all([getItems(), getOutfits()])
-      .then(([loadedItems, loadedOutfits]) => {
+    Promise.all([getItems(), getOutfits(), getWearHistory()])
+      .then(([loadedItems, loadedOutfits, loadedHistory]) => {
         setItems(loadedItems)
         setOutfits(loadedOutfits)
+        setHistory(loadedHistory)
       })
       .catch(() => alert('Не удалось загрузить данные'))
   }, [])
@@ -154,6 +156,11 @@ export default function TodayPage() {
               ))}
             </div>
           ) : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">Пока ничего не запланировано</p>}
+        </section>
+
+        <section className="mb-7">
+          <h2 className="mb-3 font-semibold">Недавно носила</h2>
+          {history.length ? <div className="space-y-2">{history.slice(0, 7).map((entry) => <div key={entry.id} className="flex items-center gap-3 rounded-2xl bg-[#faf8f4] p-3">{entry.item?.photo_url && <img src={entry.item.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover" />}<div className="min-w-0"><p className="truncate text-sm font-semibold">{entry.item?.custom_name || entry.item?.description || entry.item?.subcategory || entry.item?.category || 'Вещь'}</p><p className="mt-1 text-xs text-[#817b70]">{new Date(entry.worn_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}{entry.laundry_decision === 'laundry' ? ' · в стирке' : ''}</p></div></div>)}</div> : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">История появится после отметки «Надела сегодня»</p>}
         </section>
 
         <section className="mb-7">

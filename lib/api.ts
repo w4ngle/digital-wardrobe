@@ -1,4 +1,4 @@
-import { Item, Outfit, OutfitWithItems, Trip } from '@/lib/supabase'
+import { Item, Outfit, OutfitWithItems, Trip, WearRecord } from '@/lib/supabase'
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
@@ -73,3 +73,5 @@ export function getTrips() { return api<Trip[]>('/api/trips') }
 export function createTrip(trip: Omit<Trip, 'id' | 'created_at'>) {
   return api<Trip>('/api/trips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trip) })
 }
+
+export function getWearHistory() { return api<WearRecord[]>('/api/wear-history') }
