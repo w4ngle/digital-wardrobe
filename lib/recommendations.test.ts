@@ -119,4 +119,27 @@ describe('recommendOutfits', () => {
 
     expect(result.items.map((candidate) => candidate.id).sort()).not.toEqual(['bottom-1', 'top-1'])
   })
+
+  it('keeps beach outfits light and focused on swimwear', () => {
+    const swimsuit = { ...item('swimsuit', 'Купальник', 'бирюзовый', 'Отпускной', 1), subcategory: 'Раздельный купальник' }
+    const [result] = recommendOutfits([
+      swimsuit,
+      { ...item('jacket', 'Верхняя одежда', 'синий', 'Повседневный', 4), subcategory: 'Куртка' },
+      { ...item('hoodie', 'Верх', 'серый', 'Повседневный', 4), layer_role: 'Второй слой' },
+      item('dress', 'Платье', 'белый', 'Нарядный', 1),
+    ], { occasion: 'Пляж / бассейн', weather: 'Тепло', style: 'Отпускной' })
+
+    expect(result.items.map((candidate) => candidate.id)).toEqual(['swimsuit'])
+  })
+
+  it('handles a large wardrobe without generating excessive combinations', () => {
+    const wardrobe = Array.from({ length: 60 }, (_, index) => item(
+      `item-${index}`,
+      index % 3 === 0 ? 'Верх' : index % 3 === 1 ? 'Низ' : 'Обувь',
+      index % 2 ? 'черный' : 'белый',
+    ))
+    const started = performance.now()
+    expect(recommendOutfits(wardrobe, { occasion: 'На каждый день', weather: 'Прохладно', style: 'Повседневный' })).toHaveLength(3)
+    expect(performance.now() - started).toBeLessThan(500)
+  })
 })

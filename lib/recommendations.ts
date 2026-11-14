@@ -113,23 +113,25 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
   const byCategory = (category: string) => availableItems
     .filter((item) => item.category === category)
     .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))
-    .slice(0, 8)
+    .slice(0, 5)
+
+  const isBeach = request.occasion === 'Пляж / бассейн'
 
   const tops = byCategory('Верх').filter((item) => item.layer_role !== 'Второй слой')
   const bottoms = byCategory('Низ')
-  const shoes: Array<Item | null> = byCategory('Обувь')
+  const shoes: Array<Item | null> = byCategory('Обувь').filter((item) => !isBeach || ['Сандалии', 'Босоножки', 'Обувь на платформе'].includes(item.subcategory || ''))
   if (shoes.length === 0) shoes.push(null)
 
   const outerwearItems = byCategory('Верхняя одежда')
-  const outerwear: Array<Item | null> = request.weather === 'Тепло'
+  const outerwear: Array<Item | null> = isBeach || request.weather === 'Тепло'
     ? [null]
     : outerwearItems.length > 0 ? outerwearItems : [null]
-  const secondLayers: Array<Item | null> = request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой').slice(0, 3)]
-  const extras: Array<Item | null> = [null, ...byCategory('Сумка').slice(0, 2), ...byCategory('Аксессуар').slice(0, 2)]
-  const candidates: OutfitRecommendation[] = []
+  const secondLayers: Array<Item | null> = isBeach || request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой').slice(0, 2)]
+  const extras: Array<Item | null> = [null, ...byCategory('Сумка').filter((item) => !isBeach || item.subcategory === 'Пляжная сумка').slice(0, 2), ...byCategory('Аксессуар').slice(0, 2)]
+  const candidates = new Map<string, OutfitRecommendation>()
   const cores: Item[][] = []
 
-  if (request.occasion === 'Пляж / бассейн') byCategory('Купальник').forEach((item) => cores.push([item]))
+  if (isBeach) byCategory('Купальник').forEach((item) => cores.push([item]))
   else {
     for (const top of tops) for (const bottom of bottoms) cores.push([top, bottom])
     byCategory('Платье').forEach((item) => cores.push([item]))
@@ -148,18 +150,22 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
             const coldLayerPenalty = request.weather === 'Холодно' && !layer ? -5 : 0
             const rainPenalty = request.rain && !outfit.some((item) => item.rain_safe) ? -5 : 0
             const printPenalty = outfit.filter((item) => item.pattern && item.pattern !== 'Однотонная').length > 1 ? -3 : 0
-            candidates.push({
+            const candidate = {
               items: outfit,
               score: itemTotal + colors + outfitBalance(outfit) + coldLayerPenalty + rainPenalty + printPenalty,
               reason: buildReason(request, Boolean(layer)),
-            })
+            }
+            const key = outfit.map((item) => item.id).sort().join(':')
+            const existing = candidates.get(key)
+            if (!existing || candidate.score > existing.score) candidates.set(key, candidate)
           }
           }
         }
       }
   }
 
-  if (candidates.length === 0) {
+  if (candidates.size === 0) {
+    if (isBeach) return []
     const fallback = [...availableItems]
       .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))
       .filter((item, index, sorted) => sorted.findIndex((candidate) => candidate.category === item.category) === index)
@@ -173,15 +179,14 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
     }] : []
   }
 
-  const unique = candidates
+  const unique = [...candidates.values()]
     .sort((a, b) => b.score - a.score)
-    .filter((candidate, index, sorted) => {
-      const key = candidate.items.map((item) => item.id).sort().join(':')
+    .filter((candidate) => {
       const rejected = learnedPreferences(preferences).rejectedCombos.some((combo) => {
         const ids = new Set(candidate.items.map((item) => item.id))
         return combo.filter((id) => ids.has(id)).length >= Math.max(2, Math.min(combo.length, ids.size) - 1)
       })
-      return !rejected && sorted.findIndex((other) => other.items.map((item) => item.id).sort().join(':') === key) === index
+      return !rejected
     })
 
   const varied: OutfitRecommendation[] = []

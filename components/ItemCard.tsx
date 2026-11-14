@@ -40,7 +40,7 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
           <div className="flex h-full items-center justify-center text-[#9d9488]"><CoatHanger size={34} aria-label="Нет фото" /></div>
         )}
 
-        <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-8rem)] truncate rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#4d4941] shadow-sm backdrop-blur">
+        <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-8rem)] rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold leading-tight text-[#4d4941] shadow-sm backdrop-blur">
           {item.ai_meta?.demo === true ? 'Демо · ' : ''}{item.subcategory || item.category}
         </span>
 
