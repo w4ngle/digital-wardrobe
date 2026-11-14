@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createTrip, getItems, getTrips } from '@/lib/api'
+import { createTrip, getItems, getTrips, updateTrip } from '@/lib/api'
 import { Item, Trip } from '@/lib/supabase'
-import { buildPackingList, WEATHER, Weather } from '@/lib/recommendations'
+import { buildPackingList, OutfitRecommendation, recommendOutfits, WEATHER, Weather } from '@/lib/recommendations'
 import { STYLES } from '@/lib/taxonomy'
 
 export default function PackingPage() {
@@ -22,10 +22,14 @@ export default function PackingPage() {
   const [laundry, setLaundry] = useState(false)
   const [baggage, setBaggage] = useState('Чемодан')
   const [packing, setPacking] = useState<Item[]>([])
+  const [packingOutfits, setPackingOutfits] = useState<OutfitRecommendation[]>([])
   const [packedIds, setPackedIds] = useState<string[]>([])
   const [checkedExtras, setCheckedExtras] = useState<string[]>([])
   const [trips, setTrips] = useState<Trip[]>([])
   const [saving, setSaving] = useState(false)
+  const [currentTripId, setCurrentTripId] = useState<string | null>(null)
+  const [reviewing, setReviewing] = useState(false)
+  const [usedIds, setUsedIds] = useState<string[]>([])
 
   useEffect(() => { Promise.all([getItems(), getTrips()]).then(([loadedItems, loadedTrips]) => { setItems(loadedItems); setTrips(loadedTrips) }).catch(() => alert('Не удалось загрузить гардероб')) }, [])
 
@@ -48,11 +52,14 @@ export default function PackingPage() {
     }
     const selected = new Map<string, Item>()
     const add = (list: Item[]) => list.forEach((item) => selected.set(item.id, item))
-    add(buildPackingList(items, { occasion: 'Поездка', weather: tripWeather, style }, days))
-    if (evenings > 0) add(buildPackingList(items, { occasion: 'Праздник / на выход', weather: tripWeather, style: 'Нарядный' }, evenings))
+    const everydayOutfits = recommendOutfits(items, { occasion: 'Поездка', weather: tripWeather, style }, Math.min(days, 14))
+    const eveningOutfits = evenings > 0 ? recommendOutfits(items, { occasion: 'Праздник / на выход', weather: tripWeather, style: 'Нарядный' }, evenings) : []
+    add(everydayOutfits.flatMap((outfit) => outfit.items))
+    add(eveningOutfits.flatMap((outfit) => outfit.items))
     if (beach) add(buildPackingList(items, { occasion: 'Пляж / бассейн', weather: tripWeather, style: 'Отпускной' }, 2))
     if (training) add(buildPackingList(items, { occasion: 'Тренировка', weather: tripWeather, style: 'Спортивный' }, Math.min(days, 5)))
     setPacking([...selected.values()])
+    setPackingOutfits([...everydayOutfits, ...eveningOutfits])
     setPackedIds([])
     setCheckedExtras([])
   }
@@ -66,6 +73,7 @@ export default function PackingPage() {
     try {
       const trip = await createTrip({ name: city || tripType, details: { tripType, city, startDate, endDate, days, weather, style, evenings, beach, training, laundry, baggage }, packed_item_ids: packing.map((item) => item.id), checklist: extraEntries.map((label) => ({ label, checked: checkedExtras.includes(label) })) })
       setTrips((current) => [trip, ...current])
+      setCurrentTripId(trip.id)
     } catch { alert('Не удалось сохранить поездку') } finally { setSaving(false) }
   }
 
@@ -73,6 +81,17 @@ export default function PackingPage() {
     const details = trip.details
     setTripType(String(details.tripType || 'Поездка')); setCity(String(details.city || trip.name)); setStartDate(String(details.startDate || '')); setEndDate(String(details.endDate || '')); setDays(Number(details.days || 3)); setWeather((details.weather || 'Прохладно') as Weather); setStyle(String(details.style || 'Повседневный')); setEvenings(Number(details.evenings || 0)); setBeach(Boolean(details.beach)); setTraining(Boolean(details.training)); setLaundry(Boolean(details.laundry)); setBaggage(String(details.baggage || 'Чемодан'))
     setPacking(items.filter((item) => trip.packed_item_ids.includes(item.id))); setCheckedExtras(trip.checklist.filter((entry) => entry.checked).map((entry) => entry.label)); setPackedIds([])
+    setCurrentTripId(trip.id); setReviewing(false); setUsedIds(Array.isArray(details.usedItemIds) ? details.usedItemIds as string[] : [])
+  }
+
+  async function saveReview() {
+    if (!currentTripId) return
+    setSaving(true)
+    try {
+      const current = trips.find((trip) => trip.id === currentTripId)
+      const updated = await updateTrip(currentTripId, { ...(current?.details || {}), reviewedAt: new Date().toISOString(), usedItemIds: usedIds })
+      setTrips((all) => all.map((trip) => trip.id === updated.id ? updated : trip)); setReviewing(false)
+    } catch { alert('Не удалось сохранить итоги поездки') } finally { setSaving(false) }
   }
 
   return <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
@@ -92,7 +111,7 @@ export default function PackingPage() {
         <button type="button" onClick={build} disabled={!days || days < 1 || items.length < 2} className="w-full rounded-full bg-[#1f422f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">Собрать список</button>
         {forecast && <p className="rounded-xl bg-[#e5ece7] px-3 py-2 text-xs">Прогноз: {forecast}</p>}
       </section>
-      {packing.length > 0 && <><section className="mt-7"><div className="mb-3 flex items-end justify-between"><div><h2 className="text-xl font-bold">Взять с собой</h2><p className="mt-1 text-xs text-[#817b70]">{city || tripType} · {days} дн. · {baggage}{laundry ? ' · со стиркой' : ''}</p></div><span className="text-xs text-[#817b70]">Собрано {packedIds.length} из {packing.length}</span></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{packing.map((item) => { const packed = packedIds.includes(item.id); return <button type="button" key={item.id} onClick={() => togglePacked(item.id)} aria-pressed={packed} className={`relative overflow-hidden rounded-[20px] bg-[#faf8f4] text-left transition ${packed ? 'opacity-55' : ''}`}>{item.photo_url && <img src={item.photo_url} alt={item.description || item.category} className="aspect-square w-full object-cover" />}<span className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border-2 text-sm font-bold ${packed ? 'border-[#1f422f] bg-[#1f422f] text-white' : 'border-white bg-white/80 text-transparent'}`}>✓</span><span className="block p-3"><span className={`block truncate text-sm font-semibold ${packed ? 'line-through' : ''}`}>{item.custom_name || item.description || item.subcategory || item.category}</span><span className="mt-1 block text-xs text-[#817b70]">{item.category} · {item.color}</span></span></button> })}</div></section><section className="mt-7 rounded-[24px] bg-[#fffaf2] p-4"><h2 className="mb-3 text-xl font-bold">Не забыть</h2><div className="space-y-2">{extraEntries.map((entry) => <label key={entry} className={`flex items-center gap-3 rounded-xl p-3 text-sm ${checkedExtras.includes(entry) ? 'bg-[#e5ece7] line-through' : 'bg-[#f3ede4]'}`}><input type="checkbox" checked={checkedExtras.includes(entry)} onChange={() => setCheckedExtras((current) => current.includes(entry) ? current.filter((value) => value !== entry) : [...current, entry])} className="h-5 w-5" />{entry}</label>)}</div><button type="button" onClick={saveTrip} disabled={saving} className="mt-4 w-full rounded-full bg-[#1f422f] px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{saving ? 'Сохраняю…' : 'Сохранить поездку'}</button></section></>}
+      {packing.length > 0 && <><section className="mt-7"><div className="mb-3 flex items-end justify-between"><div><h2 className="text-xl font-bold">Взять с собой</h2><p className="mt-1 text-xs text-[#817b70]">{city || tripType} · {days} дн. · {baggage}{laundry ? ' · со стиркой' : ''}</p></div><span className="text-xs text-[#817b70]">Собрано {packedIds.length} из {packing.length}</span></div>{packingOutfits.length > 0 && <div className="mb-4 flex gap-2 overflow-x-auto pb-1">{packingOutfits.map((outfit, index) => <div key={outfit.items.map((item) => item.id).join(':')} className="w-44 shrink-0 rounded-2xl bg-white p-3"><p className="text-xs font-bold">Образ {index + 1}</p><p className="mt-1 line-clamp-3 text-[11px] text-[#817b70]">{outfit.items.map((item) => item.custom_name || item.subcategory || item.category).join(' + ')}</p></div>)}</div>}<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{packing.map((item) => { const packed = packedIds.includes(item.id); return <button type="button" key={item.id} onClick={() => reviewing ? setUsedIds((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id]) : togglePacked(item.id)} aria-pressed={reviewing ? usedIds.includes(item.id) : packed} className={`relative overflow-hidden rounded-[20px] bg-[#faf8f4] text-left transition ${(reviewing ? usedIds.includes(item.id) : packed) ? 'opacity-55' : ''}`}>{item.photo_url && <img src={item.photo_url} alt={item.description || item.category} className="aspect-square w-full object-cover" />}<span className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border-2 text-sm font-bold ${(reviewing ? usedIds.includes(item.id) : packed) ? 'border-[#1f422f] bg-[#1f422f] text-white' : 'border-white bg-white/80 text-transparent'}`}>✓</span><span className="block p-3"><span className={`block truncate text-sm font-semibold ${packed && !reviewing ? 'line-through' : ''}`}>{item.custom_name || item.description || item.subcategory || item.category}</span><span className="mt-1 block text-xs text-[#817b70]">{item.category} · {item.color}</span></span></button> })}</div></section><section className="mt-7 rounded-[24px] bg-[#fffaf2] p-4"><h2 className="mb-3 text-xl font-bold">Не забыть</h2><div className="space-y-2">{extraEntries.map((entry) => <label key={entry} className={`flex items-center gap-3 rounded-xl p-3 text-sm ${checkedExtras.includes(entry) ? 'bg-[#e5ece7] line-through' : 'bg-[#f3ede4]'}`}><input type="checkbox" checked={checkedExtras.includes(entry)} onChange={() => setCheckedExtras((current) => current.includes(entry) ? current.filter((value) => value !== entry) : [...current, entry])} className="h-5 w-5" />{entry}</label>)}</div><button type="button" onClick={saveTrip} disabled={saving} className="mt-4 w-full rounded-full bg-[#1f422f] px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{saving ? 'Сохраняю…' : 'Сохранить поездку'}</button>{currentTripId && <button type="button" onClick={() => reviewing ? saveReview() : setReviewing(true)} disabled={saving} className="mt-2 w-full rounded-full border border-[#1f422f] px-4 py-3 text-sm font-semibold">{reviewing ? `Сохранить: использовано ${usedIds.length}` : 'После поездки: что пригодилось?'}</button>}</section></>}
     </div>
   </main>
 }
