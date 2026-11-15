@@ -53,14 +53,6 @@ export default function RecommendPage() {
     return learned
   }, { itemScores: {}, rejectedCombos: [] })
 
-  function handleRecommend() {
-    setAiUsed(false)
-    setSaved(null)
-    setLocked({})
-    setRated({})
-    setResults(recommendOutfits(items, { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover }, 3, preferences))
-  }
-
   async function handleAiRecommend() {
     setAiLoading(true)
     setSaved(null); setLocked({}); setRated({})
@@ -84,7 +76,6 @@ export default function RecommendPage() {
     } catch {
       setResults(local)
       setAiUsed(false)
-      alert('AI сейчас недоступен — показала варианты по правилам.')
     } finally {
       setAiLoading(false)
     }
@@ -157,10 +148,7 @@ export default function RecommendPage() {
           <div><h2 className="mb-3 text-sm font-semibold">Настроение</h2><Choice values={STYLES} value={style} onChange={setStyle} /></div>
           <label className="block text-sm font-semibold">Собрать с конкретной вещью<select value={requiredItemId} onChange={(event) => setRequiredItemId(event.target.value)} className="mt-2 w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-3 font-normal"><option value="">Не важно</option>{items.filter((item) => !item.availability || item.availability === 'available').map((item) => <option key={item.id} value={item.id}>{item.custom_name || item.description || `${item.subcategory || item.category} · ${item.color}`}</option>)}</select></label>
           <label className="flex items-center gap-3 rounded-2xl bg-[#f3ede4] p-3 text-sm font-medium"><input type="checkbox" checked={rediscover} onChange={(event) => setRediscover(event.target.checked)} className="h-5 w-5" />Добавить вещи, которые давно не носились</label>
-          <button type="button" disabled={loading || items.length < 2} onClick={handleRecommend} className="w-full rounded-full bg-[#1f422f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
-            {loading ? 'Загружаем гардероб…' : 'Показать варианты'}
-          </button>
-          <button type="button" disabled={loading || aiLoading || items.length < 2} onClick={handleAiRecommend} className="w-full rounded-full border border-[#1f422f] bg-white px-4 py-3.5 font-semibold text-[#1f422f] disabled:opacity-35">{aiLoading ? 'AI подбирает…' : 'Подобрать с AI'}</button>
+          <button type="button" disabled={loading || aiLoading || items.length < 2} onClick={handleAiRecommend} className="w-full rounded-full bg-[#1f422f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">{loading ? 'Загружаем гардероб…' : aiLoading ? 'Подбираем…' : 'Показать варианты'}</button>
           {aiUsed && <p className="text-center text-xs text-[#65786d]">Первый вариант подобран AI и проверен правилами гардероба</p>}
         </section>
 
