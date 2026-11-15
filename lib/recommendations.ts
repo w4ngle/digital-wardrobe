@@ -107,30 +107,37 @@ function buildReason(request: OutfitRequest, hasOuterwear: boolean) {
   return `${request.style} образ для повода «${request.occasion.toLowerCase()}» и погоды «${request.weather.toLowerCase()}». Цвета и уровень формальности сочетаются.${layer}`
 }
 
+function itemIdentity(item: Item) {
+  const photo = item.photo_url?.split('?')[0]
+  return photo || `${item.category}|${item.subcategory}|${item.custom_name || item.description}|${item.color}`.toLowerCase()
+}
+
 export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 3, preferences: OutfitPreferences = {}): OutfitRecommendation[] {
   const today = new Date().toISOString().slice(0, 10)
   const availableItems = items.filter((item) => (!item.availability || item.availability === 'available') && (!item.snoozed_until || item.snoozed_until < today))
   const byCategory = (category: string) => availableItems
     .filter((item) => item.category === category)
     .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))
+    .filter((item, index, sorted) => sorted.findIndex((candidate) => itemIdentity(candidate) === itemIdentity(item)) === index)
     .slice(0, 5)
 
   const isBeach = request.occasion === 'Пляж / бассейн'
+  const isTraining = request.occasion === 'Тренировка'
 
   const tops = byCategory('Верх').filter((item) => item.layer_role !== 'Второй слой')
   const bottoms = byCategory('Низ')
   const shoes: Array<Item | null> = byCategory('Обувь').filter((item) => !isBeach || ['Сандалии', 'Босоножки', 'Обувь на платформе'].includes(item.subcategory || ''))
   if (shoes.length === 0) shoes.push(null)
 
-  const outerwearItems = byCategory('Верхняя одежда')
+  const outerwearItems = byCategory('Верхняя одежда').filter((item) => !isTraining || item.style === 'Спортивный')
   const outerwear: Array<Item | null> = isBeach || request.weather === 'Тепло'
     ? [null]
     : outerwearItems.length > 0 ? outerwearItems : [null]
   const secondLayers: Array<Item | null> = isBeach
     ? [null, ...byCategory('Верх').filter((item) => item.subcategory === 'Пляжная накидка').slice(0, 2)]
-    : request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой').slice(0, 2)]
+    : request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой' && (!isTraining || item.style === 'Спортивный')).slice(0, 2)]
   const accessories = byCategory('Аксессуар').filter((item) => !isBeach || ['Очки', 'Головной убор'].includes(item.subcategory || ''))
-  const extras: Array<Item | null> = [null, ...byCategory('Сумка').filter((item) => !isBeach || item.subcategory === 'Пляжная сумка').slice(0, 2), ...accessories.slice(0, 2)]
+  const extras: Array<Item | null> = isTraining ? [null] : [null, ...byCategory('Сумка').filter((item) => !isBeach || item.subcategory === 'Пляжная сумка').slice(0, 2), ...accessories.slice(0, 2)]
   const candidates = new Map<string, OutfitRecommendation>()
   const cores: Item[][] = []
 
@@ -147,6 +154,7 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
           for (const secondLayer of secondLayers) {
           for (const extra of extras) {
             const outfit = [...core, shoe, secondLayer, layer, extra].filter((item): item is Item => item !== null)
+            if (new Set(outfit.map(itemIdentity)).size !== outfit.length) continue
             if (request.requiredItemId && !outfit.some((item) => item.id === request.requiredItemId)) continue
             const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request, preferences), 0)
             const colors = core.length > 1 ? colorScore(core[0].color, core[1].color) : 2

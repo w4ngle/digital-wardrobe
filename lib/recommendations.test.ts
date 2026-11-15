@@ -156,4 +156,20 @@ describe('recommendOutfits', () => {
     expect(recommendOutfits(wardrobe, { occasion: 'На каждый день', weather: 'Прохладно', style: 'Повседневный' })).toHaveLength(3)
     expect(performance.now() - started).toBeLessThan(500)
   })
+
+  it('keeps training outfits sporty and removes visual duplicates', () => {
+    const duplicatePhoto = 'https://example.com/hoodie.png'
+    const [result] = recommendOutfits([
+      { ...item('hoodie-1', 'Верх', 'серый', 'Спортивный'), photo_url: duplicatePhoto },
+      { ...item('hoodie-2', 'Верх', 'серый', 'Спортивный'), photo_url: `${duplicatePhoto}?signed=1`, layer_role: 'Второй слой' },
+      item('leggings', 'Низ', 'черный', 'Спортивный'),
+      item('sneakers', 'Обувь', 'серый', 'Спортивный'),
+      { ...item('jacket', 'Верхняя одежда', 'черный'), subcategory: 'Косуха' },
+      { ...item('belt', 'Аксессуар', 'черный'), subcategory: 'Ремень' },
+    ], { occasion: 'Тренировка', weather: 'Прохладно', style: 'Спортивный' })
+
+    expect(result.items.filter((candidate) => candidate.photo_url?.startsWith(duplicatePhoto))).toHaveLength(1)
+    expect(result.items.map((candidate) => candidate.id)).not.toContain('jacket')
+    expect(result.items.map((candidate) => candidate.id)).not.toContain('belt')
+  })
 })

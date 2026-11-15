@@ -10,9 +10,14 @@ export interface ValidationError {
 /**
  * Проверяет, что образ содержит все необходимые категории
  */
-function checkRequiredCategories(items: CatalogItem[]): ValidationError[] {
+function checkRequiredCategories(items: CatalogItem[], occasion?: string): ValidationError[] {
   const errors: ValidationError[] = []
   const categories = items.map((item) => item.category)
+
+  if (occasion === 'Пляж / бассейн') {
+    if (!categories.includes('Купальник')) errors.push({ code: 'missing_swimwear', message: 'Для пляжа нужен купальник' })
+    return errors
+  }
 
   // Должна быть обувь
   if (!categories.includes('Обувь')) {
@@ -125,6 +130,7 @@ export function checkAllNumbersExist(
       })
     }
   }
+  if (new Set(numbers).size !== numbers.length) errors.push({ code: 'duplicate_item', message: 'Одна вещь выбрана несколько раз' })
 
   return errors
 }
@@ -135,7 +141,8 @@ export function checkAllNumbersExist(
  */
 export function validateOutfit(
   items: CatalogItem[],
-  weather?: { tempC: number; rain: boolean }
+  weather?: { tempC: number; rain: boolean },
+  request?: { occasion: string; style: string },
 ): ValidationError[] {
   const errors: ValidationError[] = []
 
@@ -148,9 +155,17 @@ export function validateOutfit(
     return errors // Дальше проверять бессмысленно
   }
 
-  errors.push(...checkRequiredCategories(items))
+  errors.push(...checkRequiredCategories(items, request?.occasion))
   errors.push(...checkDuplicateCategories(items))
   errors.push(...checkWarmthForWeather(items, weather))
+
+  if (request?.occasion === 'Тренировка') {
+    if (items.some((item) => item.style !== 'Спортивный')) errors.push({ code: 'not_sporty', message: 'Для тренировки нужны только спортивные вещи' })
+    if (items.some((item) => ['Аксессуар', 'Сумка'].includes(item.category))) errors.push({ code: 'training_extra', message: 'Для тренировки не добавляй аксессуары' })
+  }
+  if (request?.occasion === 'Пляж / бассейн') {
+    if (items.some((item) => ['Платье', 'Комплект', 'Верхняя одежда', 'Низ'].includes(item.category))) errors.push({ code: 'beach_extra', message: 'Для пляжа не добавляй обычную или тёплую одежду' })
+  }
 
   return errors
 }

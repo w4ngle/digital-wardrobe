@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { chatJSON } from '@/lib/ai/provider'
 import { RECOMMEND_OUTFIT_SYSTEM_PROMPT } from '@/lib/ai/prompts'
 import { buildCatalog, formatCatalog, resolveItemNumbers } from '@/lib/ai/catalog'
@@ -7,12 +8,22 @@ import {
   formatErrors,
   checkAllNumbersExist,
 } from '@/lib/ai/validate-outfit'
-import { recommendOutfit as fallbackRecommend } from '@/lib/recommendations'
+import { OCCASIONS, recommendOutfits, WEATHER } from '@/lib/recommendations'
+import { STYLES } from '@/lib/taxonomy'
 import { hasValidSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { signItemPhotos } from '@/lib/server-photos'
 
 const MAX_RETRIES = 2
+const RequestBody = z.object({
+  query: z.string().trim().min(3).max(500),
+  weather: z.object({ tempC: z.number().min(-50).max(60), rain: z.boolean() }).optional(),
+  request: z.object({
+    occasion: z.enum(OCCASIONS), weather: z.enum(WEATHER), style: z.enum(STYLES),
+    rain: z.boolean().optional(), transport: z.enum(['Пешком', 'Автобус', 'Такси']).optional(),
+    requiredItemId: z.string().uuid().optional(), rediscover: z.boolean().optional(),
+  }),
+})
 
 export async function POST(req: NextRequest) {
   if (!await hasValidSession()) {
@@ -20,11 +31,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { query, weather } = await req.json()
-
-    if (!query || query.trim().length < 3) {
-      return NextResponse.json({ error: 'Запрос слишком короткий' }, { status: 400 })
-    }
+    const parsed = RequestBody.safeParse(await req.json())
+    if (!parsed.success) return NextResponse.json({ error: 'Проверьте параметры подбора' }, { status: 400 })
+    const { query, weather, request } = parsed.data
 
     // Получаем все вещи
     const { data, error } = await getSupabaseAdmin().from('items').select('*').or('availability.is.null,availability.eq.available')
@@ -78,7 +87,10 @@ export async function POST(req: NextRequest) {
         const selectedItems = resolveItemNumbers(catalog, result.item_numbers)
 
         // Валидируем образ
-        const validationErrors = validateOutfit(selectedItems, weather)
+        const validationErrors = validateOutfit(selectedItems, weather, request)
+        if (request.requiredItemId && !selectedItems.some((item) => item.id === request.requiredItemId)) {
+          validationErrors.push({ code: 'missing_required_item', message: 'Не использована обязательная вещь' })
+        }
         if (validationErrors.length > 0) {
           lastError = formatErrors(validationErrors)
           continue
@@ -109,18 +121,7 @@ export async function POST(req: NextRequest) {
     // Все попытки провалились — откат на правила
     console.warn('AI recommendation failed, falling back to rules')
 
-    // Пытаемся извлечь сезон и стиль из запроса
-    const queryLower = query.toLowerCase()
-    let season = 'Демисезон'
-    let style = 'Повседневный'
-
-    if (queryLower.includes('лето') || queryLower.includes('жара')) season = 'Лето'
-    if (queryLower.includes('зима') || queryLower.includes('холод')) season = 'Зима'
-    if (queryLower.includes('дело') || queryLower.includes('работ')) style = 'Деловой'
-    if (queryLower.includes('спорт') || queryLower.includes('трениров')) style = 'Спортивный'
-    if (queryLower.includes('праздник') || queryLower.includes('свадьб')) style = 'Нарядный'
-
-    const fallbackResult = fallbackRecommend(items, season, style)
+    const fallbackResult = recommendOutfits(items, request, 1)[0]
 
     if (!fallbackResult) {
       return NextResponse.json(
