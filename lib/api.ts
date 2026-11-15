@@ -80,8 +80,8 @@ export function createTrip(trip: Omit<Trip, 'id' | 'created_at'>) {
   return api<Trip>('/api/trips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trip) })
 }
 
-export function updateTrip(id: string, details: Record<string, unknown>) {
-  return api<Trip>(`/api/trips/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ details }) })
+export function updateTrip(id: string, updates: Partial<Pick<Trip, 'details' | 'packed_item_ids' | 'checklist'>>) {
+  return api<Trip>(`/api/trips/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) })
 }
 
 export function getWearHistory() { return api<WearRecord[]>('/api/wear-history') }

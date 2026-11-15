@@ -37,6 +37,8 @@ export default function RecommendPage() {
   const [rated, setRated] = useState<Record<number, -1 | 1>>({})
   const [dislikeIndex, setDislikeIndex] = useState<number | null>(null)
   const [dislikeReasons, setDislikeReasons] = useState<string[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiUsed, setAiUsed] = useState(false)
 
   useEffect(() => {
     Promise.all([getItems(), getOutfits()]).then(([loadedItems, loadedOutfits]) => {
@@ -52,10 +54,34 @@ export default function RecommendPage() {
   }, { itemScores: {}, rejectedCombos: [] })
 
   function handleRecommend() {
+    setAiUsed(false)
     setSaved(null)
     setLocked({})
     setRated({})
     setResults(recommendOutfits(items, { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover }, 3, preferences))
+  }
+
+  async function handleAiRecommend() {
+    setAiLoading(true)
+    setSaved(null); setLocked({}); setRated({})
+    const local = recommendOutfits(items, { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover }, 3, preferences)
+    try {
+      const requiredNumber = requiredItemId ? items.filter((item) => !item.availability || item.availability === 'available').findIndex((item) => item.id === requiredItemId) + 1 : 0
+      const response = await fetch('/api/recommend', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: `${occasion}; стиль: ${style}; транспорт: ${transport}; ${rain ? 'дождь; ' : ''}${requiredNumber ? `обязательно использовать вещь №${requiredNumber}; ` : ''}${rediscover ? 'предпочесть давно не ношенные вещи' : ''}`, weather: { tempC: weather === 'Тепло' ? 24 : weather === 'Прохладно' ? 13 : 2, rain } }),
+      })
+      if (!response.ok) throw new Error('ai')
+      const result = await response.json()
+      setResults([{ items: result.items, reason: result.reasoning, score: 100 }, ...local].slice(0, 3))
+      setAiUsed(result.source === 'ai')
+    } catch {
+      setResults(local)
+      setAiUsed(false)
+      alert('AI сейчас недоступен — показала варианты по правилам.')
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   function toggleLock(index: number, itemId: string) {
@@ -128,6 +154,8 @@ export default function RecommendPage() {
           <button type="button" disabled={loading || items.length < 2} onClick={handleRecommend} className="w-full rounded-full bg-[#1f422f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
             {loading ? 'Загружаем гардероб…' : 'Показать варианты'}
           </button>
+          <button type="button" disabled={loading || aiLoading || items.length < 2} onClick={handleAiRecommend} className="w-full rounded-full border border-[#1f422f] bg-white px-4 py-3.5 font-semibold text-[#1f422f] disabled:opacity-35">{aiLoading ? 'AI подбирает…' : 'Подобрать с AI · бесплатно'}</button>
+          {aiUsed && <p className="text-center text-xs text-[#65786d]">Первый вариант подобран Gemini и проверен правилами гардероба</p>}
         </section>
 
         {!results.length && !loading && (

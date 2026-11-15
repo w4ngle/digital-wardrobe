@@ -4,7 +4,7 @@ import { supportsLength, supportsWarmth } from './taxonomy'
 describe('conditional item fields', () => {
   it('shows length only for dresses and skirts', () => {
     expect(supportsLength('Платье')).toBe(true)
-    expect(supportsLength('Низ', 'Юбка мини')).toBe(true)
+    expect(supportsLength('Низ', 'Юбка')).toBe(true)
     expect(supportsLength('Низ', 'Джинсы')).toBe(false)
   })
 

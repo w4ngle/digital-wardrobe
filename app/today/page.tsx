@@ -145,7 +145,7 @@ export default function TodayPage() {
       <div className="mx-auto max-w-4xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
         <header className="mb-7">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#81786d]">Мой гардероб</p>
-          <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Сегодня</h1>
+          <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Мой обзор</h1>
         </header>
 
         <section className="mb-6 rounded-[28px] bg-[#1f422f] p-5 text-white">

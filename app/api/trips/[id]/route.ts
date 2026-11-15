@@ -4,8 +4,10 @@ import { hasValidSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 const UpdateTrip = z.object({
-  details: z.record(z.string(), z.unknown()),
-})
+  details: z.record(z.string(), z.unknown()).optional(),
+  packed_item_ids: z.array(z.string().uuid()).optional(),
+  checklist: z.array(z.object({ label: z.string().trim().min(1).max(100), checked: z.boolean() })).optional(),
+}).refine((value) => Object.keys(value).length > 0)
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })

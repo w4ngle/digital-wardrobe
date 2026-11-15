@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { uploadPhoto } from '@/lib/api'
-import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES, supportsLength, supportsWarmth } from '@/lib/taxonomy'
+import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES, supportsFit, supportsLength, supportsSeason, supportsWarmth } from '@/lib/taxonomy'
 import { Camera, ImageSquare } from '@phosphor-icons/react'
 import { removeImageBackground } from '@/lib/background-removal'
 import { compressImage } from '@/lib/client-image'
@@ -56,6 +56,8 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
   const [loading, setLoading] = useState(false)
   const [removingBackground, setRemovingBackground] = useState(false)
   const [backgroundProgress, setBackgroundProgress] = useState(0)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [aiMeta, setAiMeta] = useState<Record<string, unknown> | null>(null)
 
   const handleRemoveBackground = async () => {
     if (!photoFile) return
@@ -88,6 +90,28 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
     }
   }
 
+  const handleAnalyzePhoto = async () => {
+    if (!photoFile) return
+    setAnalyzing(true)
+    try {
+      const imageUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = reject
+        reader.readAsDataURL(photoFile)
+      })
+      const response = await fetch('/api/analyze-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl }) })
+      if (!response.ok) throw new Error('analysis')
+      const result = await response.json()
+      setCategory(result.category); setColor(result.color); setSeason(result.season); setStyle(result.style)
+      setWarmth(result.warmth); setFormality(result.formality); setDescription(result.description); setAiMeta(result._meta || null)
+    } catch {
+      alert('Не удалось распознать вещь. Заполните поля вручную.')
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -99,16 +123,16 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       await onSubmit({
         category,
         color,
-        season,
+        season: supportsSeason(category) ? season : 'Всесезонное',
         style,
         description,
         warmth: supportsWarmth(category) && !Number.isNaN(warmth) ? warmth : undefined,
         formality,
         photo_url: photoUrl,
-        ai_meta: null,
+        ai_meta: aiMeta,
         subcategory: subcategory || null,
         custom_name: customName.trim() || null,
-        fit,
+        fit: supportsFit(category) ? fit : null,
         length: supportsLength(category, subcategory) ? length || null : null,
         pattern,
         layer_role: layerRole,
@@ -137,6 +161,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       setFormality(3)
       setPhotoFile(null)
       setPhotoPreview(null)
+      setAiMeta(null)
     } catch (error) {
       console.error('Ошибка при добавлении вещи:', error)
       alert('Не удалось добавить вещь')
@@ -173,6 +198,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
           <button type="button" onClick={handleRemoveBackground} disabled={removingBackground} className="rounded-xl border border-[#cfc2b2] bg-white px-3 py-2 text-xs font-semibold text-[#1f422f] disabled:opacity-50">{removingBackground ? `Подготавливаю${backgroundProgress ? ` ${Math.round(backgroundProgress * 100)}%` : '…'}` : 'Убрать фон'}</button>
           </div>
         )}
+        {photoFile && <button type="button" onClick={handleAnalyzePhoto} disabled={analyzing} className="mt-3 w-full rounded-xl bg-[#e5ece7] px-3 py-3 text-sm font-semibold text-[#1f422f] disabled:opacity-50">{analyzing ? 'AI распознаёт вещь…' : 'Заполнить характеристики с AI'}</button>}
       </div>
 
       <div>
@@ -185,6 +211,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
             const next = e.target.value as keyof typeof SUBCATEGORIES
             setCategory(next)
             setSubcategory('')
+            if (!supportsSeason(next)) setSeason('Всесезонное')
             setLayerRole(next === 'Верхняя одежда' ? 'Верхняя одежда' : ['Платье', 'Комплект', 'Купальник', 'Домашняя одежда'].includes(next) ? 'Самостоятельная вещь' : 'Базовый слой')
           }}
           required
@@ -217,8 +244,8 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
 
       <div><label className="mb-2 block text-sm font-semibold text-[#1e3026]">Своё название <span className="font-normal text-[#81786d]">необязательно</span></label><input value={customName} onChange={(e) => setCustomName(e.target.value)} maxLength={80} placeholder="Например: любимый синий топ" className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026] placeholder:text-[#9b9185]" /></div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <label className="text-sm font-semibold text-[#1e3026]">Посадка<select value={fit} onChange={(e) => setFit(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{FITS.map((option) => <option key={option}>{option}</option>)}</select></label>
+      <div className={`grid gap-4 ${supportsFit(category) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        {supportsFit(category) && <label className="text-sm font-semibold text-[#1e3026]">Посадка<select value={fit} onChange={(e) => setFit(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{FITS.map((option) => <option key={option}>{option}</option>)}</select></label>}
         <label className="text-sm font-semibold text-[#1e3026]">Принт / фактура<select value={pattern} onChange={(e) => setPattern(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{PATTERNS.map((option) => <option key={option}>{option}</option>)}</select></label>
       </div>
 
@@ -226,7 +253,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
 
       {category === 'Верх' && <label className="block text-sm font-semibold text-[#1e3026]">Роль в образе<select value={layerRole} onChange={(e) => setLayerRole(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{LAYER_ROLES.map((option) => <option key={option}>{option}</option>)}</select></label>}
 
-      <div>
+      {supportsSeason(category) && <div>
         <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
           Сезон
         </label>
@@ -243,7 +270,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
             </option>
           ))}
         </select>
-      </div>
+      </div>}
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
@@ -279,7 +306,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
 
       <details className="rounded-2xl border border-[#dfd4c4] bg-white p-4">
         <summary className="cursor-pointer text-sm font-semibold text-[#1e3026]">Дополнительные характеристики</summary>
-        <div className="mt-4 grid grid-cols-2 gap-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {supportsWarmth(category) && <div>
           <label className="mb-2 block text-sm font-semibold text-[#1e3026]">
             Теплота (1-5)
@@ -312,13 +339,13 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="text-sm font-semibold text-[#1e3026]">Комфорт (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(comfort) ? '' : comfort} onChange={(e) => setComfort(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
         <label className="text-sm font-semibold text-[#1e3026]">Уверенность (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(confidence) ? '' : confidence} onChange={(e) => setConfidence(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
       </div>
 
-      <div className="space-y-2 rounded-2xl bg-[#f3ede4] p-4">
-        <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={needsUnderlayer} onChange={(e) => setNeedsUnderlayer(e.target.checked)} className="h-5 w-5" /><span><strong>Нужен особый нижний слой</strong><span className="block text-xs text-[#81786d]">Например, вещь просвечивает</span></span></label>
+      <div className="space-y-3 rounded-2xl bg-[#f3ede4] p-4">
+        <label className="flex items-start gap-3 text-sm leading-5"><input type="checkbox" checked={needsUnderlayer} onChange={(e) => setNeedsUnderlayer(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" /><span><strong className="block">Нужен особый нижний слой</strong><span className="block text-xs text-[#81786d]">Например, вещь просвечивает</span></span></label>
         {(category === 'Обувь' || category === 'Верхняя одежда') && <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={rainSafe} onChange={(e) => setRainSafe(e.target.checked)} className="h-5 w-5" /><span><strong>Подходит для дождя</strong></span></label>}
       </div>
       </details>

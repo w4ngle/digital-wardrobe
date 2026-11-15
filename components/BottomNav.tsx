@@ -9,7 +9,7 @@ const links = [
   { href: '/recommend', label: 'Подбор', icon: Sparkle },
   { href: '/outfits', label: 'Образы', icon: Stack },
   { href: '/packing', label: 'Чемодан', icon: Suitcase },
-  { href: '/today', label: 'Сегодня', icon: CalendarBlank },
+  { href: '/today', label: 'Обзор', icon: CalendarBlank },
 ]
 
 export default function BottomNav() {

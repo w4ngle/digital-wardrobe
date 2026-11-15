@@ -7,7 +7,7 @@ import { Camera, ImageSquare, X } from '@phosphor-icons/react'
 import { removeImageBackground } from '@/lib/background-removal'
 import { compressImage } from '@/lib/client-image'
 import FastImage from '@/components/FastImage'
-import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES, supportsLength, supportsWarmth } from '@/lib/taxonomy'
+import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES, supportsFit, supportsLength, supportsSeason, supportsWarmth } from '@/lib/taxonomy'
 
 type EditItemModalProps = {
   item: Item
@@ -77,10 +77,10 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
         photoUrl = await uploadPhoto(photoFile)
       }
       await onSave(item.id, {
-        category, color, season, style, photo_url: photoUrl,
+        category, color, season: supportsSeason(category) ? season : 'Всесезонное', style, photo_url: photoUrl,
         subcategory: subcategory || null,
         custom_name: customName.trim() || null,
-        fit, length: supportsLength(category, subcategory) ? length || null : null, pattern, layer_role: layerRole,
+        fit: supportsFit(category) ? fit : null, length: supportsLength(category, subcategory) ? length || null : null, pattern, layer_role: layerRole,
         warmth: supportsWarmth(category) && !Number.isNaN(warmth) ? warmth : null, formality,
         comfort, confidence, needs_underlayer: needsUnderlayer, rain_safe: rainSafe,
       })
@@ -118,7 +118,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
               <label className="mb-2 block text-sm font-semibold text-[#1e3026]">Категория</label>
               <select
                 value={category}
-                onChange={(e) => { setCategory(e.target.value); setSubcategory('') }}
+                onChange={(e) => { setCategory(e.target.value); setSubcategory(''); if (!supportsSeason(e.target.value)) setSeason('Всесезонное') }}
                 required
                 className="w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 text-[#1e3026]"
               >
@@ -143,7 +143,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
               />
             </div>
 
-            <div>
+            {supportsSeason(category) && <div>
               <label className="mb-2 block text-sm font-semibold text-[#1e3026]">Сезон</label>
               <select
                 value={season}
@@ -155,7 +155,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-            </div>
+            </div>}
 
             <div>
               <label className="mb-2 block text-sm font-semibold text-[#1e3026]">Стиль</label>
@@ -171,19 +171,19 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="text-sm font-semibold">Посадка<select value={fit} onChange={(e) => setFit(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{FITS.map((value) => <option key={value}>{value}</option>)}</select></label>
+            <div className={`grid gap-3 ${supportsFit(category) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {supportsFit(category) && <label className="text-sm font-semibold">Посадка<select value={fit} onChange={(e) => setFit(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{FITS.map((value) => <option key={value}>{value}</option>)}</select></label>}
               <label className="text-sm font-semibold">Принт / фактура<select value={pattern} onChange={(e) => setPattern(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{PATTERNS.map((value) => <option key={value}>{value}</option>)}</select></label>
             </div>
             {supportsLength(category, subcategory) && <label className="block text-sm font-semibold">Длина<select value={length} onChange={(e) => setLength(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal"><option value="">Не указывать</option>{LENGTHS.map((value) => <option key={value}>{value}</option>)}</select></label>}
             {category === 'Верх' && <label className="block text-sm font-semibold">Роль в образе<select value={layerRole} onChange={(e) => setLayerRole(e.target.value)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal">{LAYER_ROLES.map((value) => <option key={value}>{value}</option>)}</select></label>}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="text-sm font-semibold">Комфорт (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(comfort) ? '' : comfort} onChange={(e) => setComfort(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
               <label className="text-sm font-semibold">Уверенность (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(confidence) ? '' : confidence} onChange={(e) => setConfidence(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
             </div>
-            <div className="grid grid-cols-2 gap-3">{supportsWarmth(category) && <label className="text-sm font-semibold">Теплота (1–5)<input type="number" min="1" max="5" value={Number.isNaN(warmth) ? '' : warmth} onChange={(e) => setWarmth(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>}<label className="text-sm font-semibold">Формальность (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(formality) ? '' : formality} onChange={(e) => setFormality(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label></div>
-            <div className="space-y-2 rounded-2xl bg-[#f3ede4] p-4">
-              <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={needsUnderlayer} onChange={(e) => setNeedsUnderlayer(e.target.checked)} className="h-5 w-5" />Нужен особый нижний слой</label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{supportsWarmth(category) && <label className="text-sm font-semibold">Теплота (1–5)<input type="number" min="1" max="5" value={Number.isNaN(warmth) ? '' : warmth} onChange={(e) => setWarmth(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>}<label className="text-sm font-semibold">Формальность (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(formality) ? '' : formality} onChange={(e) => setFormality(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label></div>
+            <div className="space-y-3 rounded-2xl bg-[#f3ede4] p-4">
+              <label className="flex items-start gap-3 text-sm leading-5"><input type="checkbox" checked={needsUnderlayer} onChange={(e) => setNeedsUnderlayer(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" /><span>Нужен особый нижний слой</span></label>
               {(category === 'Обувь' || category === 'Верхняя одежда') && <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={rainSafe} onChange={(e) => setRainSafe(e.target.checked)} className="h-5 w-5" />Подходит для дождя</label>}
             </div>
 
