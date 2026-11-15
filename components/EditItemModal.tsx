@@ -5,6 +5,8 @@ import { Item } from '@/lib/supabase'
 import { uploadPhoto } from '@/lib/api'
 import { Camera, ImageSquare, X } from '@phosphor-icons/react'
 import { removeImageBackground } from '@/lib/background-removal'
+import { compressImage } from '@/lib/client-image'
+import FastImage from '@/components/FastImage'
 import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES, supportsLength, supportsWarmth } from '@/lib/taxonomy'
 
 type EditItemModalProps = {
@@ -34,16 +36,19 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
   const [photoPreview, setPhotoPreview] = useState<string | null>(item.photo_url)
   const [loading, setLoading] = useState(false)
   const [removingBackground, setRemovingBackground] = useState(false)
+  const [backgroundProgress, setBackgroundProgress] = useState(0)
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setPhotoFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string)
+      try {
+        const compressed = await compressImage(file)
+        setPhotoFile(compressed)
+        setPhotoPreview(URL.createObjectURL(compressed))
+      } catch {
+        setPhotoFile(file)
+        setPhotoPreview(URL.createObjectURL(file))
       }
-      reader.readAsDataURL(file)
     }
   }
 
@@ -51,7 +56,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
     if (!photoFile) return
     setRemovingBackground(true)
     try {
-      const processed = await removeImageBackground(photoFile)
+      const processed = await removeImageBackground(photoFile, setBackgroundProgress)
       setPhotoFile(processed)
       setPhotoPreview(URL.createObjectURL(processed))
     } catch (error) {
@@ -59,6 +64,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
       alert('Не удалось убрать фон. Можно сохранить исходное фото.')
     } finally {
       setRemovingBackground(false)
+      setBackgroundProgress(0)
     }
   }
 
@@ -75,7 +81,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
         subcategory: subcategory || null,
         custom_name: customName.trim() || null,
         fit, length: supportsLength(category, subcategory) ? length || null : null, pattern, layer_role: layerRole,
-        warmth: supportsWarmth(category) ? warmth : null, formality,
+        warmth: supportsWarmth(category) && !Number.isNaN(warmth) ? warmth : null, formality,
         comfort, confidence, needs_underlayer: needsUnderlayer, rain_safe: rainSafe,
       })
       onClose()
@@ -98,14 +104,14 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
               <label className="mb-2 block text-sm font-semibold text-[#1e3026]">Фото</label>
               {photoPreview && (
                 <div className="mb-3 w-32 h-32">
-                  <img src={photoPreview} alt="Превью" className="h-full w-full rounded-xl border border-[#dfd4c4] object-cover" />
+                  <FastImage src={photoPreview} alt="Превью" className="h-full w-full rounded-xl border border-[#dfd4c4] object-cover" />
                 </div>
               )}
               <div className="grid grid-cols-2 gap-2">
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#1f422f] px-3 py-3 text-sm font-semibold text-white"><Camera size={18} aria-hidden />Сделать<input type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="sr-only" /></label>
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#cfc2b2] px-3 py-3 text-sm font-semibold text-[#1f422f]"><ImageSquare size={18} aria-hidden />Из галереи<input type="file" accept="image/*" onChange={handleFileChange} className="sr-only" /></label>
               </div>
-              {photoFile && <button type="button" onClick={handleRemoveBackground} disabled={removingBackground} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-2.5 text-sm font-semibold text-[#1f422f] disabled:opacity-50">{removingBackground ? 'Убираю фон…' : 'Убрать фон'}</button>}
+              {photoFile && <button type="button" onClick={handleRemoveBackground} disabled={removingBackground} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-2.5 text-sm font-semibold text-[#1f422f] disabled:opacity-50">{removingBackground ? `Подготавливаю${backgroundProgress ? ` ${Math.round(backgroundProgress * 100)}%` : '…'}` : 'Убрать фон'}</button>}
             </div>
 
             <div>
@@ -175,7 +181,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
               <label className="text-sm font-semibold">Комфорт (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(comfort) ? '' : comfort} onChange={(e) => setComfort(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
               <label className="text-sm font-semibold">Уверенность (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(confidence) ? '' : confidence} onChange={(e) => setConfidence(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>
             </div>
-            <div className="grid grid-cols-2 gap-3">{supportsWarmth(category) && <label className="text-sm font-semibold">Теплота (1–5)<input type="number" min="1" max="5" value={warmth} onChange={(e) => setWarmth(e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>}<label className="text-sm font-semibold">Формальность (1–5)<input type="number" min="1" max="5" value={formality} onChange={(e) => setFormality(e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label></div>
+            <div className="grid grid-cols-2 gap-3">{supportsWarmth(category) && <label className="text-sm font-semibold">Теплота (1–5)<input type="number" min="1" max="5" value={Number.isNaN(warmth) ? '' : warmth} onChange={(e) => setWarmth(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label>}<label className="text-sm font-semibold">Формальность (1–5)<input type="number" min="1" max="5" required value={Number.isNaN(formality) ? '' : formality} onChange={(e) => setFormality(e.target.value === '' ? Number.NaN : e.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#cfc2b2] bg-white px-3 py-3 font-normal" /></label></div>
             <div className="space-y-2 rounded-2xl bg-[#f3ede4] p-4">
               <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={needsUnderlayer} onChange={(e) => setNeedsUnderlayer(e.target.checked)} className="h-5 w-5" />Нужен особый нижний слой</label>
               {(category === 'Обувь' || category === 'Верхняя одежда') && <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={rainSafe} onChange={(e) => setRainSafe(e.target.checked)} className="h-5 w-5" />Подходит для дождя</label>}

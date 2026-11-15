@@ -5,6 +5,8 @@ import { uploadPhoto } from '@/lib/api'
 import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES, supportsLength, supportsWarmth } from '@/lib/taxonomy'
 import { Camera, ImageSquare } from '@phosphor-icons/react'
 import { removeImageBackground } from '@/lib/background-removal'
+import { compressImage } from '@/lib/client-image'
+import FastImage from '@/components/FastImage'
 
 type ItemFormProps = {
   onSubmit: (item: {
@@ -53,50 +55,13 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [removingBackground, setRemovingBackground] = useState(false)
-
-  // Сжатие изображения на клиенте
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')!
-
-          // Ресайз до максимум 1024px по большей стороне
-          const maxSize = 1024
-          let width = img.width
-          let height = img.height
-
-          if (width > height && width > maxSize) {
-            height = (height * maxSize) / width
-            width = maxSize
-          } else if (height > maxSize) {
-            width = (width * maxSize) / height
-            height = maxSize
-          }
-
-          canvas.width = width
-          canvas.height = height
-          ctx.drawImage(img, 0, 0, width, height)
-
-          // JPEG 0.8 качество
-          resolve(canvas.toDataURL('image/jpeg', 0.8))
-        }
-        img.onerror = reject
-        img.src = e.target?.result as string
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }
+  const [backgroundProgress, setBackgroundProgress] = useState(0)
 
   const handleRemoveBackground = async () => {
     if (!photoFile) return
     setRemovingBackground(true)
     try {
-      const processed = await removeImageBackground(photoFile)
+      const processed = await removeImageBackground(photoFile, setBackgroundProgress)
       setPhotoFile(processed)
       setPhotoPreview(URL.createObjectURL(processed))
     } catch (error) {
@@ -104,20 +69,21 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
       alert('Не удалось убрать фон. Можно сохранить исходное фото.')
     } finally {
       setRemovingBackground(false)
+      setBackgroundProgress(0)
     }
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setPhotoFile(file)
-
       try {
-        const compressedDataUrl = await compressImage(file)
-        setPhotoPreview(compressedDataUrl)
-
+        const compressed = await compressImage(file)
+        setPhotoFile(compressed)
+        setPhotoPreview(URL.createObjectURL(compressed))
       } catch (error) {
         console.error('Ошибка обработки фото:', error)
+        setPhotoFile(file)
+        setPhotoPreview(URL.createObjectURL(file))
       }
     }
   }
@@ -198,13 +164,13 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         {photoPreview && (
           <div className="mt-3 flex items-end gap-3">
           <div className="relative h-32 w-32 bg-[linear-gradient(45deg,#eee_25%,transparent_25%),linear-gradient(-45deg,#eee_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#eee_75%),linear-gradient(-45deg,transparent_75%,#eee_75%)] bg-[length:16px_16px]">
-            <img
+            <FastImage
               src={photoPreview}
               alt="Превью"
               className="h-full w-full rounded-xl border border-[#dfd4c4] object-cover"
             />
           </div>
-          <button type="button" onClick={handleRemoveBackground} disabled={removingBackground} className="rounded-xl border border-[#cfc2b2] bg-white px-3 py-2 text-xs font-semibold text-[#1f422f] disabled:opacity-50">{removingBackground ? 'Убираю фон…' : 'Убрать фон'}</button>
+          <button type="button" onClick={handleRemoveBackground} disabled={removingBackground} className="rounded-xl border border-[#cfc2b2] bg-white px-3 py-2 text-xs font-semibold text-[#1f422f] disabled:opacity-50">{removingBackground ? `Подготавливаю${backgroundProgress ? ` ${Math.round(backgroundProgress * 100)}%` : '…'}` : 'Убрать фон'}</button>
           </div>
         )}
       </div>

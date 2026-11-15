@@ -5,6 +5,7 @@ import { createOutfit, deleteOutfit, editOutfit, getItems, getOutfits, updateOut
 import { Item, OutfitWithItems } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
 import { Heart, PencilSimple, X } from '@phosphor-icons/react'
+import FastImage from '@/components/FastImage'
 
 export default function OutfitsPage() {
   const [outfits, setOutfits] = useState<OutfitWithItems[]>([])
@@ -134,7 +135,7 @@ export default function OutfitsPage() {
                 const selected = selectedItemIds.includes(item.id)
                 return (
                   <button type="button" key={item.id} onClick={() => toggleItem(item.id)} className={`relative overflow-hidden rounded-2xl border-2 bg-[#ece7de] transition ${selected ? 'border-[#26372f]' : 'border-transparent'}`} aria-pressed={selected}>
-                    {item.photo_url && <img src={item.photo_url} alt={item.description || item.category} className="aspect-square w-full object-cover" />}
+                    {item.photo_url && <FastImage src={item.photo_url} alt={item.description || item.category} className="aspect-square w-full object-cover" />}
                     <span className="block truncate bg-white/90 px-2 py-2 text-left text-[10px] font-medium">{item.description || item.category}</span>
                     {selected && <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#26372f] text-xs text-white">✓</span>}
                   </button>

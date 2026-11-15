@@ -2,6 +2,7 @@
 
 import { Item } from '@/lib/supabase'
 import { CoatHanger, Heart, PencilSimple, X } from '@phosphor-icons/react'
+import FastImage from '@/components/FastImage'
 
 type ItemCardProps = {
   item: Item
@@ -31,7 +32,7 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
     <article className="group overflow-hidden rounded-[22px] bg-[#faf8f4] shadow-[0_1px_0_rgba(41,37,31,0.05),0_8px_24px_rgba(41,37,31,0.06)]">
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#e9e4db]">
         {item.photo_url ? (
-          <img
+          <FastImage
             src={item.photo_url}
             alt={item.description || item.category}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"

@@ -1,4 +1,5 @@
 import { Item } from '@/lib/supabase'
+import FastImage from '@/components/FastImage'
 
 export default function OutfitCollage({ items }: { items: Item[] }) {
   const visible = items.slice(0, 4)
@@ -8,7 +9,7 @@ export default function OutfitCollage({ items }: { items: Item[] }) {
       {visible.map((item, index) => (
         <div key={item.id} className="relative overflow-hidden bg-[#ece7de]">
           {item.photo_url ? (
-            <img src={item.photo_url} alt={item.description || `${item.color}, ${item.category.toLowerCase()}`} className="h-full w-full object-cover" />
+            <FastImage src={item.photo_url} alt={item.description || `${item.color}, ${item.category.toLowerCase()}`} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center px-2 text-center text-xs text-[#8c867b]">{item.category}</div>
           )}

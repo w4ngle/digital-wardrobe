@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createOutfit, getItems, getOutfits, updateItem } from '@/lib/api'
 import { Item, OutfitWithItems } from '@/lib/supabase'
 import { OCCASIONS, WEATHER, Occasion, OutfitRecommendation, Weather, recommendOutfits, replaceOutfitItem } from '@/lib/recommendations'
+import FastImage from '@/components/FastImage'
 import { STYLES } from '@/lib/taxonomy'
 import { ArrowsClockwise, Lock, LockOpen, ThumbsDown, ThumbsUp } from '@phosphor-icons/react'
 
@@ -142,7 +143,7 @@ export default function RecommendPage() {
                 {result.items.map((item) => {
                   const isLocked = locked[index]?.includes(item.id)
                   return <div key={item.id} className="relative aspect-square overflow-hidden bg-[#ece7de]">
-                    {item.photo_url && <img src={item.photo_url} alt={item.description || item.category} className="h-full w-full object-cover" />}
+                    {item.photo_url && <FastImage src={item.photo_url} alt={item.description || item.category} className="h-full w-full object-cover" />}
                     <div className="absolute inset-x-1.5 bottom-1.5 flex items-center justify-between gap-1 rounded-full bg-white/90 p-1 pl-2 shadow-sm backdrop-blur">
                       <span className="truncate text-[9px] font-semibold">{item.category}</span>
                       <div className="flex shrink-0">

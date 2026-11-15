@@ -126,8 +126,11 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
   const outerwear: Array<Item | null> = isBeach || request.weather === 'Тепло'
     ? [null]
     : outerwearItems.length > 0 ? outerwearItems : [null]
-  const secondLayers: Array<Item | null> = isBeach || request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой').slice(0, 2)]
-  const extras: Array<Item | null> = [null, ...byCategory('Сумка').filter((item) => !isBeach || item.subcategory === 'Пляжная сумка').slice(0, 2), ...byCategory('Аксессуар').slice(0, 2)]
+  const secondLayers: Array<Item | null> = isBeach
+    ? [null, ...byCategory('Верх').filter((item) => item.subcategory === 'Пляжная накидка').slice(0, 2)]
+    : request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой').slice(0, 2)]
+  const accessories = byCategory('Аксессуар').filter((item) => !isBeach || ['Очки', 'Головной убор'].includes(item.subcategory || ''))
+  const extras: Array<Item | null> = [null, ...byCategory('Сумка').filter((item) => !isBeach || item.subcategory === 'Пляжная сумка').slice(0, 2), ...accessories.slice(0, 2)]
   const candidates = new Map<string, OutfitRecommendation>()
   const cores: Item[][] = []
 

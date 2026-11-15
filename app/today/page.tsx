@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { getItems, getOutfits, getWearHistory } from '@/lib/api'
+import { getItems, getOutfits, getWearHistory, updateItem, updateOutfit } from '@/lib/api'
 import { Item, OutfitWithItems, WearRecord } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
 import { Cloud, Sparkle } from '@phosphor-icons/react'
+import FastImage from '@/components/FastImage'
 
 type Weather = { temperature: number, apparent: number, code: number }
 
@@ -26,10 +27,29 @@ export default function TodayPage() {
   const [history, setHistory] = useState<WearRecord[]>([])
   const [openedItems, setOpenedItems] = useState<Item[] | null>(null)
   const [openedTitle, setOpenedTitle] = useState('')
+  const [openedFavorite, setOpenedFavorite] = useState<{ type: 'item' | 'outfit', id: string } | null>(null)
 
-  function openDetails(title: string, detailItems: Item[]) {
+  function openDetails(title: string, detailItems: Item[], favorite?: { type: 'item' | 'outfit', id: string }) {
     setOpenedTitle(title)
     setOpenedItems(detailItems)
+    setOpenedFavorite(favorite || null)
+  }
+
+  async function removeOpenedFavorite() {
+    if (!openedFavorite) return
+    try {
+      if (openedFavorite.type === 'item') {
+        await updateItem(openedFavorite.id, { is_favorite: false })
+        setItems((current) => current.map((item) => item.id === openedFavorite.id ? { ...item, is_favorite: false } : item))
+      } else {
+        await updateOutfit(openedFavorite.id, { is_favorite: false, rating: null })
+        setOutfits((current) => current.map((outfit) => outfit.id === openedFavorite.id ? { ...outfit, is_favorite: false, rating: null } : outfit))
+      }
+      setOpenedItems(null)
+      setOpenedFavorite(null)
+    } catch {
+      alert('Не удалось убрать из избранного')
+    }
   }
 
   useEffect(() => {
@@ -167,24 +187,24 @@ export default function TodayPage() {
 
         <section className="mb-7">
           <h2 className="mb-3 font-semibold">Недавно носила</h2>
-          {history.length ? <div className="space-y-2">{history.slice(0, 7).map((entry) => <button type="button" onClick={() => entry.item && openDetails(entry.item.custom_name || entry.item.description || entry.item.subcategory || entry.item.category, [entry.item])} key={entry.id} className="flex w-full items-center gap-3 rounded-2xl bg-[#faf8f4] p-3 text-left">{entry.item?.photo_url && <img src={entry.item.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover" />}<span className="min-w-0"><span className="block truncate text-sm font-semibold">{entry.item?.custom_name || entry.item?.description || entry.item?.subcategory || entry.item?.category || 'Вещь'}</span><span className="mt-1 block text-xs text-[#817b70]">{new Date(entry.worn_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}{entry.laundry_decision === 'laundry' ? ' · в стирке' : ''}</span></span></button>)}</div> : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">История появится после отметки «Надела сегодня»</p>}
+          {history.length ? <div className="space-y-2">{history.slice(0, 7).map((entry) => <button type="button" onClick={() => entry.item && openDetails(entry.item.custom_name || entry.item.description || entry.item.subcategory || entry.item.category, [entry.item])} key={entry.id} className="flex w-full items-center gap-3 rounded-2xl bg-[#faf8f4] p-3 text-left">{entry.item?.photo_url && <FastImage src={entry.item.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover" />}<span className="min-w-0"><span className="block truncate text-sm font-semibold">{entry.item?.custom_name || entry.item?.description || entry.item?.subcategory || entry.item?.category || 'Вещь'}</span><span className="mt-1 block text-xs text-[#817b70]">{new Date(entry.worn_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}{entry.laundry_decision === 'laundry' ? ' · в стирке' : ''}</span></span></button>)}</div> : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">История появится после отметки «Надела сегодня»</p>}
         </section>
 
         <section className="mb-7">
           <h2 className="mb-3 font-semibold">Статистика</h2>
           <div className="rounded-[24px] bg-[#faf8f4] p-4">
-            {favoritePair && <div className="mb-4 border-b border-[#e8e2d8] pb-4"><p className="mb-2 text-xs text-[#817b70]">Любимое сочетание</p><div className="flex items-center gap-3">{favoritePair.items.map((item) => item.photo_url && <img key={item.id} src={item.photo_url} alt={item.description || item.category} className="h-14 w-14 rounded-xl object-cover" />)}<p className="text-sm font-semibold">Встречается в любимых образах · {favoritePair.count}</p></div></div>}
-            {mostWorn && (mostWorn.wear_count || 0) > 0 && <div className="mb-4 flex items-center gap-3 border-b border-[#e8e2d8] pb-4">{mostWorn.photo_url && <img src={mostWorn.photo_url} alt={mostWorn.description || mostWorn.category} className="h-14 w-14 rounded-xl object-cover" />}<div><p className="text-xs text-[#817b70]">Чаще всего надеваете</p><p className="mt-1 text-sm font-semibold">{mostWorn.description || mostWorn.category} · {mostWorn.wear_count}</p></div></div>}
+            {favoritePair && <div className="mb-4 border-b border-[#e8e2d8] pb-4"><p className="mb-2 text-xs text-[#817b70]">Любимое сочетание</p><div className="flex items-center gap-3">{favoritePair.items.map((item) => item.photo_url && <FastImage key={item.id} src={item.photo_url} alt={item.description || item.category} className="h-14 w-14 rounded-xl object-cover" />)}<p className="text-sm font-semibold">Встречается в любимых образах · {favoritePair.count}</p></div></div>}
+            {mostWorn && (mostWorn.wear_count || 0) > 0 && <div className="mb-4 flex items-center gap-3 border-b border-[#e8e2d8] pb-4">{mostWorn.photo_url && <FastImage src={mostWorn.photo_url} alt={mostWorn.description || mostWorn.category} className="h-14 w-14 rounded-xl object-cover" />}<div><p className="text-xs text-[#817b70]">Чаще всего надеваете</p><p className="mt-1 text-sm font-semibold">{mostWorn.description || mostWorn.category} · {mostWorn.wear_count}</p></div></div>}
             <div className="space-y-3">{Object.entries(categoryCount).sort((a, b) => b[1] - a[1]).map(([category, count]) => <div key={category} className="flex items-center gap-3"><span className="w-28 truncate text-xs text-[#686258]">{category}</span><div className="h-2 flex-1 overflow-hidden rounded-full bg-[#ece7dd]"><div className="h-full rounded-full bg-[#65786d]" style={{ width: `${items.length ? count / items.length * 100 : 0}%` }} /></div><span className="w-5 text-right text-xs font-semibold">{count}</span></div>)}</div>
           </div>
         </section>
 
         <section>
           <h2 className="mb-3 font-semibold">Избранное</h2>
-          {favoriteItems.length || favoriteOutfits.length ? <div className="grid grid-cols-4 gap-2">{favoriteItems.map((item) => <button type="button" onClick={() => openDetails(item.custom_name || item.description || item.category, [item])} key={item.id} className="overflow-hidden rounded-xl bg-[#faf8f4]">{item.photo_url && <img src={item.photo_url} alt={item.description || item.category} className="aspect-square w-full object-cover" />}</button>)}{favoriteOutfits.map((outfit) => <button type="button" onClick={() => openDetails(outfit.name, outfit.items)} key={outfit.id} className="overflow-hidden rounded-xl"><OutfitCollage items={outfit.items} /></button>)}</div> : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">Нажмите ♡ у вещи или образа</p>}
+          {favoriteItems.length || favoriteOutfits.length ? <div className="grid grid-cols-4 gap-2">{favoriteItems.map((item) => <button type="button" onClick={() => openDetails(item.custom_name || item.description || item.category, [item], { type: 'item', id: item.id })} key={item.id} className="overflow-hidden rounded-xl bg-[#faf8f4]">{item.photo_url && <FastImage src={item.photo_url} alt={item.description || item.category} className="aspect-square w-full object-cover" />}</button>)}{favoriteOutfits.map((outfit) => <button type="button" onClick={() => openDetails(outfit.name, outfit.items, { type: 'outfit', id: outfit.id })} key={outfit.id} className="overflow-hidden rounded-xl"><OutfitCollage items={outfit.items} /></button>)}</div> : <p className="rounded-2xl border border-[#ded8cd] px-4 py-7 text-center text-sm text-[#817b70]">Нажмите ♡ у вещи или образа</p>}
         </section>
       </div>
-      {openedItems && <div className="fixed inset-0 z-50 flex items-end bg-black/45 p-3 sm:items-center sm:justify-center" onClick={() => setOpenedItems(null)}><section className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[28px] bg-[#fffaf2] p-5" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">{openedTitle}</h2><button type="button" onClick={() => setOpenedItems(null)} className="h-10 w-10 rounded-full bg-[#eee9df] text-xl" aria-label="Закрыть">×</button></div><div className="grid grid-cols-2 gap-3">{openedItems.map((item) => <div key={item.id} className="overflow-hidden rounded-2xl bg-white">{item.photo_url && <img src={item.photo_url} alt={item.custom_name || item.category} className="aspect-square w-full object-cover" />}<div className="p-3"><p className="text-sm font-semibold">{item.custom_name || item.description || item.subcategory || item.category}</p><p className="mt-1 text-xs text-[#817b70]">{item.category} · {item.color}</p></div></div>)}</div></section></div>}
+      {openedItems && <div className="fixed inset-0 z-50 flex items-end bg-black/45 p-3 sm:items-center sm:justify-center" onClick={() => setOpenedItems(null)}><section className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[28px] bg-[#fffaf2] p-5" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">{openedTitle}</h2><button type="button" onClick={() => setOpenedItems(null)} className="h-10 w-10 rounded-full bg-[#eee9df] text-xl" aria-label="Закрыть">×</button></div><div className="grid grid-cols-2 gap-3">{openedItems.map((item) => <div key={item.id} className="overflow-hidden rounded-2xl bg-white">{item.photo_url && <FastImage src={item.photo_url} alt={item.custom_name || item.category} className="aspect-square w-full object-cover" />}<div className="p-3"><p className="text-sm font-semibold">{item.custom_name || item.description || item.subcategory || item.category}</p><p className="mt-1 text-xs text-[#817b70]">{item.category} · {item.color}</p></div></div>)}</div>{openedFavorite && <button type="button" onClick={removeOpenedFavorite} className="mt-4 w-full rounded-full border border-[#6f1820] px-4 py-3 text-sm font-semibold text-[#6f1820]">Убрать из избранного</button>}</section></div>}
     </main>
   )
 }

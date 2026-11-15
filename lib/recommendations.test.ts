@@ -132,6 +132,20 @@ describe('recommendOutfits', () => {
     expect(result.items.map((candidate) => candidate.id)).toEqual(['swimsuit'])
   })
 
+  it('allows beach accessories but never a scarf', () => {
+    const results = recommendOutfits([
+      { ...item('swimsuit', 'Купальник', 'коралловый', 'Отпускной', 1), subcategory: 'Раздельный купальник' },
+      { ...item('sandals', 'Обувь', 'бежевый', 'Отпускной', 1), subcategory: 'Сандалии' },
+      { ...item('coverup', 'Верх', 'белый', 'Отпускной', 1), subcategory: 'Пляжная накидка' },
+      { ...item('bag', 'Сумка', 'бежевый', 'Отпускной', 1), subcategory: 'Пляжная сумка' },
+      { ...item('glasses', 'Аксессуар', 'черный', 'Отпускной', 1), subcategory: 'Очки' },
+      { ...item('scarf', 'Аксессуар', 'бордовый', 'Повседневный', 4), subcategory: 'Шарф' },
+    ], { occasion: 'Пляж / бассейн', weather: 'Тепло', style: 'Отпускной' })
+
+    expect(results.some((result) => result.items.some((candidate) => candidate.id === 'sandals'))).toBe(true)
+    expect(results.flatMap((result) => result.items.map((candidate) => candidate.id))).not.toContain('scarf')
+  })
+
   it('handles a large wardrobe without generating excessive combinations', () => {
     const wardrobe = Array.from({ length: 60 }, (_, index) => item(
       `item-${index}`,

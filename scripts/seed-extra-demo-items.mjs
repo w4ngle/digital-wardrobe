@@ -14,8 +14,14 @@ const items = [
   ['generated-black-heels.png', 'Чёрные туфли на каблуке', 'Обувь', 'Туфли', 'Чёрный', 'Всесезонное', 'Нарядный', 2, 5, 'Обычная', 'Обычная', 'Однотонная', 'Самостоятельная вещь', 2, 5, false, false],
   ['generated-black-shoulder-bag.png', 'Маленькая чёрная сумка', 'Сумка', 'Сумка', 'Чёрный', 'Всесезонное', 'Нарядный', 2, 4, 'Обычная', 'Обычная', 'Однотонная', 'Самостоятельная вещь', 4, 5, false, true],
   ['generated-black-leather-jacket.png', 'Чёрная кожаная косуха', 'Верхняя одежда', 'Куртка', 'Чёрный', 'Демисезон', 'Повседневный', 3, 3, 'По фигуре', 'Короткая', 'Однотонная', 'Верхняя одежда', 4, 5, false, true],
+  ['generated-coral-bikini.png', 'Коралловый раздельный купальник', 'Купальник', 'Раздельный купальник', 'Коралловый', 'Лето', 'Отпускной', 1, 2, 'Облегающая', 'Короткая', 'Однотонная', 'Самостоятельная вещь', 4, 5, false, true],
+  ['generated-white-beach-coverup.png', 'Белая пляжная накидка', 'Верх', 'Пляжная накидка', 'Белый', 'Лето', 'Отпускной', 1, 1, 'Свободная', 'Длинная', 'Однотонная', 'Базовый слой', 5, 5, false, false],
+  ['generated-beige-sandals.png', 'Бежевые сандалии', 'Обувь', 'Сандалии', 'Бежевый', 'Лето', 'Отпускной', 1, 2, 'Обычная', 'Обычная', 'Однотонная', 'Самостоятельная вещь', 5, 4, false, false],
+  ['generated-straw-beach-bag.png', 'Плетёная пляжная сумка', 'Сумка', 'Пляжная сумка', 'Бежевый', 'Лето', 'Отпускной', 1, 2, 'Обычная', 'Обычная', 'Однотонная', 'Самостоятельная вещь', 5, 5, false, false],
+  ['generated-black-sunglasses.png', 'Чёрные солнцезащитные очки', 'Аксессуар', 'Очки', 'Чёрный', 'Лето', 'Отпускной', 1, 3, 'Обычная', 'Обычная', 'Однотонная', 'Самостоятельная вещь', 5, 5, false, false],
 ]
 
+let added = 0
 for (const [file, custom_name, category, subcategory, color, season, style, warmth, formality, fit, length, pattern, layer_role, comfort, confidence, needs_underlayer, rain_safe] of items) {
   const { data: existing } = await supabase.from('items').select('id').eq('custom_name', custom_name).maybeSingle()
   if (existing) continue
@@ -28,6 +34,7 @@ for (const [file, custom_name, category, subcategory, color, season, style, warm
     availability: 'available', ai_meta: { demo: true, source: 'generated' },
   })
   if (inserted.error) throw inserted.error
+  added++
 }
 
-console.log(`Готово: ${items.length} дополнительных демо-вещей`)
+console.log(`Готово: добавлено ${added}, описано ${items.length} демо-вещей`)
