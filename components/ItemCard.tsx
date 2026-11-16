@@ -68,8 +68,8 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
           <span className="rounded-full bg-[#f3e4dd] px-2 py-1 text-[10px] text-[#6f1820]">{availabilityLabels[item.availability || 'available']}</span>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => onWear(item)} className="rounded-xl bg-[#1f422f] px-2 py-2.5 text-xs font-semibold text-white active:scale-[0.98]">Надела</button>
-          <button type="button" onClick={() => setDetailsOpen(true)} className="rounded-xl bg-[#eee9df] px-2 py-2.5 text-xs font-medium text-[#52635a] active:scale-[0.98]">Подробнее</button>
+          <button type="button" onClick={() => onWear(item)} className="min-w-0 truncate rounded-xl bg-[#1f422f] px-1 py-2.5 text-[11px] font-semibold text-white active:scale-[0.98]">Надела</button>
+          <button type="button" onClick={() => setDetailsOpen(true)} className="min-w-0 truncate rounded-xl bg-[#eee9df] px-1 py-2.5 text-[11px] font-medium text-[#52635a] active:scale-[0.98]">Подробнее</button>
         </div>
       </div>
 
