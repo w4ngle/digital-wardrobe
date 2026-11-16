@@ -8,8 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:eval": "vitest run eval/recommendation.eval.test.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:ci": "next build --webpack"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
