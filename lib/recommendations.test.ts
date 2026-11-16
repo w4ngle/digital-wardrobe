@@ -173,6 +173,17 @@ describe('recommendOutfits', () => {
     expect(result.items.map((candidate) => candidate.id)).not.toContain('belt')
   })
 
+  it('does not put a warm sweater over another warm sweater', () => {
+    const results = recommendOutfits([
+      { ...item('sweater', 'Верх', 'кремовый', 'Повседневный', 4), subcategory: 'Свитер' },
+      { ...item('second-sweater', 'Верх', 'молочный', 'Повседневный', 4), subcategory: 'Свитер', layer_role: 'Второй слой' },
+      item('jeans', 'Низ', 'черный', 'Повседневный', 4),
+      item('boots', 'Обувь', 'черный', 'Повседневный', 4),
+    ], { occasion: 'Обычная прогулка', weather: 'Холодно', style: 'Повседневный' })
+
+    expect(results.every((result) => !result.items.some((candidate) => candidate.id === 'second-sweater'))).toBe(true)
+  })
+
   it('allows explicitly marked training clothes but excludes ordinary clothes', () => {
     const [result] = recommendOutfits([
       { ...item('marked-top', 'Верх', 'белый'), training_suitable: true },

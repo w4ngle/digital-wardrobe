@@ -82,6 +82,11 @@ function inferredWarmth(item: Item) {
   return 3
 }
 
+function isBulkyTop(item: Item) {
+  const name = `${item.subcategory || ''} ${item.custom_name || ''} ${item.description || ''}`.toLowerCase()
+  return item.category === 'Верх' && (inferredWarmth(item) >= 3 || /свитер|худи|толстов|кофт|кардиган/.test(name))
+}
+
 function inferredFormality(item: Item) {
   if (item.formality) return item.formality
   if (item.style === 'Деловой' || item.style === 'Нарядный') return 4
@@ -157,6 +162,7 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
         for (const layer of outerwear) {
           for (const secondLayer of secondLayers) {
           for (const extra of extras) {
+            if (secondLayer && core.some(isBulkyTop)) continue
             const outfit = [...core, shoe, secondLayer, layer, extra].filter((item): item is Item => item !== null)
             if (new Set(outfit.map(itemIdentity)).size !== outfit.length) continue
             if (request.requiredItemId && !outfit.some((item) => item.id === request.requiredItemId)) continue
