@@ -1,108 +1,108 @@
-# Digital Wardrobe — hybrid AI outfit recommender
+# Digital Wardrobe — гибридная AI-система подбора образов
 
 [![CI](https://github.com/w4ngle/digital-wardrobe/actions/workflows/ci.yml/badge.svg)](https://github.com/w4ngle/digital-wardrobe/actions/workflows/ci.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3FCF8E)](https://supabase.com/)
 
-Production-oriented Telegram Mini App that turns wardrobe photos into structured data and recommends outfits using a **hybrid ML + deterministic rules pipeline**. The system combines multimodal item extraction, constrained LLM generation, domain validation, fallback ranking and explicit user feedback.
+Telegram Mini App, которая превращает фотографии одежды в структурированные данные и подбирает образы с помощью **гибридного ML-пайплайна и детерминированных правил**. Система объединяет мультимодальное распознавание вещей, управляемую генерацию LLM, проверку предметных ограничений, резервное ранжирование и обратную связь пользователя.
 
-**Live app:** [digital-wardrobe-gilt.vercel.app](https://digital-wardrobe-gilt.vercel.app) · Access is restricted to configured Telegram users because wardrobe photos are private.
+**Рабочая версия:** [digital-wardrobe-gilt.vercel.app](https://digital-wardrobe-gilt.vercel.app) · Доступ ограничен разрешёнными Telegram-пользователями, поскольку фотографии гардероба являются личными данными.
 
-## Why this project is relevant to ML / Data Science
+## Ценность проекта для ML / Data Science
 
-The interesting part is not a single model call. It is the decision system around it:
+Главная часть проекта — не единичный вызов модели, а система принятия решений вокруг неё:
 
-- converts unstructured clothing photos into a validated feature schema;
-- represents a wardrobe as a compact catalog suitable for LLM context;
-- combines weather, occasion, transport, availability and user preferences;
-- validates generated outfits against hard domain constraints;
-- retries invalid model output and falls back to a deterministic ranker;
-- learns lightweight preference scores from likes, dislikes and rejected combinations;
-- separates offline constraint evaluation from product analytics and model quality claims.
+- преобразует неструктурированные фотографии одежды в проверенную схему признаков;
+- представляет гардероб как компактный каталог для контекста LLM;
+- учитывает погоду, повод, транспорт, доступность вещей и предпочтения пользователя;
+- проверяет сгенерированные образы по строгим предметным ограничениям;
+- повторяет запрос при некорректном ответе модели и использует детерминированный ранжировщик как fallback;
+- адаптирует веса предпочтений по оценкам и отклонённым сочетаниям;
+- отделяет офлайн-проверку ограничений от продуктовой аналитики и оценки качества модели.
 
-No benchmark number in this repository is presented as real-world model accuracy. The included evaluation suite measures deterministic constraint compliance on synthetic fixtures; production quality still requires an anonymized labeled dataset.
+Метрики в репозитории не выдаются за точность модели в реальных условиях. Тесты измеряют соблюдение детерминированных ограничений на синтетических данных; для оценки production-качества нужен анонимизированный размеченный датасет.
 
-## Product capabilities
+## Возможности продукта
 
-- wardrobe catalog with photo upload, background removal and AI-assisted metadata;
-- outfit recommendation for everyday use, events, university, training and beach scenarios;
-- mandatory-item, weather, rain, transport and “rediscover old items” controls;
-- item-level replacement, locking, temporary suppression and availability states;
-- likes/dislikes, saved outfits, calendar, wear history and laundry cycle;
-- automatic and manual trip packing with destination weather and editable checklists;
-- Telegram authentication, morning/evening flows and two-user outfit proposals;
-- responsive mobile-first UI with a seeded demo wardrobe.
+- каталог гардероба с загрузкой фото, удалением фона и AI-разметкой;
+- подбор образов на каждый день, для мероприятий, университета, тренировок и пляжа;
+- учёт обязательной вещи, погоды, дождя, транспорта и давно не надетых вещей;
+- замена и фиксация отдельных вещей, временное скрытие и управление доступностью;
+- оценки, сохранённые образы, календарь, история носки и цикл стирки;
+- автоматическая и ручная сборка чемодана с погодой и редактируемым списком;
+- Telegram-аутентификация, утренние и вечерние сценарии, предложения образов между двумя пользователями;
+- адаптивный mobile-first интерфейс и демонстрационный гардероб.
 
-## ML system
+## ML-система
 
 ```mermaid
 flowchart LR
-    A[Wardrobe photo] --> B[Compression and background removal]
-    B --> C[Vision model]
-    C --> D[Zod item schema]
-    D --> E[(Supabase wardrobe)]
-    E --> F[Compact numbered catalog]
-    U[Occasion, weather, transport, feedback] --> G[Rule-based ranker]
-    U --> H[LLM recommender]
+    A[Фото вещи] --> B[Сжатие и удаление фона]
+    B --> C[Vision-модель]
+    C --> D[Схема вещи Zod]
+    D --> E[(Гардероб в Supabase)]
+    E --> F[Компактный нумерованный каталог]
+    U[Повод, погода, транспорт, оценки] --> G[Ранжировщик на правилах]
+    U --> H[LLM-рекомендатель]
     F --> G
     F --> H
-    H --> I[Schema and domain validator]
-    I -->|valid| J[Ranked outfit]
-    I -->|invalid, max 2 attempts| H
-    I -->|still invalid| G
+    H --> I[Проверка схемы и ограничений]
+    I -->|корректно| J[Ранжированный образ]
+    I -->|ошибка, до 2 попыток| H
+    I -->|снова ошибка| G
     G --> J
-    J --> K[User feedback]
-    K --> L[Preference scores and rejected combinations]
+    J --> K[Обратная связь]
+    K --> L[Веса предпочтений и отклонённые сочетания]
     L --> G
 ```
 
-### Features used by the ranker
+### Признаки ранжирования
 
-| Signal | Role |
+| Сигнал | Роль |
 |---|---|
-| Category and layer | Enforces a structurally complete outfit |
-| Warmth and season | Matches temperature and cold-weather layers |
-| Formality and occasion | Separates daily, business and event outfits |
-| Style and training suitability | Applies activity-specific constraints |
-| Color compatibility | Scores combinations rather than isolated items |
-| Comfort and confidence | Personal utility signal |
-| Availability and snooze state | Hard exclusion from current candidates |
-| Last worn date | Supports wardrobe rediscovery |
-| Likes and rejected combinations | Lightweight online personalization |
+| Категория и слой | Формируют структурно полный образ |
+| Теплота и сезон | Учитывают температуру и верхний слой |
+| Формальность и повод | Разделяют повседневные, деловые и праздничные образы |
+| Стиль и пригодность для тренировки | Задают ограничения для активности |
+| Сочетаемость цветов | Оценивает сочетание, а не отдельную вещь |
+| Комфорт и уверенность | Персональный сигнал полезности |
+| Доступность и временное скрытие | Исключают вещь из текущих кандидатов |
+| Дата последней носки | Помогает возвращать забытые вещи |
+| Оценки и отклонённые сочетания | Обеспечивают простую онлайн-персонализацию |
 
-See the [ML system card](docs/ML_SYSTEM.md) for assumptions, validation, evaluation design, limitations and next experiments.
+Предпосылки, валидация, схема оценки, ограничения и следующие эксперименты описаны в [карточке ML-системы](docs/ML_SYSTEM.md).
 
-## Evaluation and quality gates
+## Оценка и контроль качества
 
 ```bash
-npm run test:eval   # recommendation constraint evaluation
-npm test            # unit and regression tests
+npm run test:eval   # проверка ограничений рекомендательной системы
+npm test            # модульные и регрессионные тесты
 npm run lint
 npm run typecheck
 npm run build:ci
 ```
 
-The evaluation set covers beach safety, training suitability, cold-weather layers, mandatory items and unavailable-item exclusion. CI runs on every push and pull request.
+Набор проверяет безопасность пляжных образов, пригодность вещей для тренировки, слои для холодной погоды, обязательные вещи и исключение недоступных вещей. CI запускается при каждом push и pull request.
 
-## Architecture
+## Архитектура
 
 ```text
-app/                    Next.js pages and authenticated server routes
-components/             mobile-first product UI
-lib/ai/                 providers, prompts, schemas, catalog and validation
-lib/recommendations.ts  deterministic ranking and fallback engine
-eval/                   reproducible constraint evaluation
-supabase/migrations/    PostgreSQL schema evolution
-scripts/                synthetic demo-data seeding
-docs/                   ML system card and project documentation
+app/                    страницы Next.js и защищённые серверные маршруты
+components/             mobile-first интерфейс
+lib/ai/                 провайдеры, промпты, схемы, каталог и валидация
+lib/recommendations.ts  детерминированное ранжирование и fallback-алгоритм
+eval/                   воспроизводимая проверка ограничений
+supabase/migrations/    миграции схемы PostgreSQL
+scripts/                генерация синтетических демоданных
+docs/                   карточка ML-системы и документация проекта
 ```
 
-The browser never receives AI or Supabase secret keys. AI calls, catalog access and Telegram session verification happen on server routes.
+Браузер не получает секретные ключи AI или Supabase. Вызовы AI, доступ к каталогу и проверка Telegram-сессии выполняются в серверных маршрутах.
 
-## Local setup
+## Локальный запуск
 
-Requirements: Node.js 22+, a Supabase project and optionally a Gemini or OpenAI API key.
+Требования: Node.js 22+, проект Supabase и, при необходимости, API-ключ Gemini или OpenAI.
 
 ```bash
 git clone https://github.com/w4ngle/digital-wardrobe.git
@@ -111,38 +111,38 @@ npm ci
 cp .env.example .env.local
 ```
 
-Apply migrations from `supabase/migrations/` in numeric order, configure `.env.local`, then run `npm run dev`.
+Примените миграции из `supabase/migrations/` по порядку, настройте `.env.local` и выполните `npm run dev`.
 
-Important variables are documented in [.env.example](.env.example). `GEMINI_API_KEY` is preferred; OpenAI is the fallback provider.
+Основные переменные описаны в [.env.example](.env.example). Предпочтительный провайдер — Gemini (`GEMINI_API_KEY`), OpenAI используется как резервный.
 
-## Data and privacy
+## Данные и конфиденциальность
 
-- Real wardrobe photos and private evaluation data are not stored in Git.
-- Demo catalog images are synthetic or project-owned fixtures.
-- Access to the deployed app is allow-listed through Telegram user IDs.
-- Uploaded photos are processed only for wardrobe functionality.
-- Secrets are server-side environment variables and are ignored by Git.
+- Настоящие фотографии гардероба и приватные данные оценки не хранятся в Git.
+- Изображения демонстрационного каталога синтетические или принадлежат проекту.
+- Доступ к развёрнутому приложению ограничен списком Telegram ID.
+- Загруженные фотографии обрабатываются только для функций гардероба.
+- Секреты хранятся в серверных переменных окружения и исключены из Git.
 
-See [SECURITY.md](SECURITY.md) before deploying your own instance.
+Перед развёртыванием своего экземпляра ознакомьтесь с [SECURITY.md](SECURITY.md).
 
-## Engineering highlights
+## Инженерные решения
 
-- typed trust boundaries with Zod;
-- provider fallback between Gemini and OpenAI;
-- validation/retry/fallback instead of trusting generated JSON;
-- nested Supabase reads to avoid outfit N+1 queries;
-- deterministic tests for high-risk recommendation constraints;
-- reversible demo data and explicit availability lifecycle;
-- production deployment on Vercel with scheduled Telegram routes.
+- типизированные границы доверия с Zod;
+- резервирование между Gemini и OpenAI;
+- цепочка validation → retry → fallback вместо доверия сгенерированному JSON;
+- вложенные запросы Supabase без N+1 при загрузке образов;
+- детерминированные тесты критичных ограничений рекомендаций;
+- обратимые демоданные и явный жизненный цикл доступности вещи;
+- production-развёртывание в Vercel с плановыми Telegram-маршрутами.
 
-## Roadmap
+## Планы развития
 
-- anonymized feedback event table and offline experiment snapshots;
-- ranking metrics such as constraint pass rate, coverage, diversity and acceptance@k;
-- temporal train/validation split once enough interactions exist;
-- calibrated item-analysis confidence and human correction tracking;
-- pairwise or learning-to-rank model after collecting sufficient unbiased feedback.
+- анонимизированные события обратной связи и снимки офлайн-экспериментов;
+- метрики constraint pass rate, coverage, diversity и acceptance@k;
+- временное разделение train/validation после накопления взаимодействий;
+- калибровка уверенности распознавания вещей и учёт ручных исправлений;
+- pairwise-ранжирование или learning-to-rank после сбора достаточного объёма несмещённой обратной связи.
 
-## License
+## Лицензия
 
-[MIT](LICENSE). Do not reuse private wardrobe data or third-party images without permission.
+[MIT](LICENSE). Не используйте личные данные гардероба или сторонние изображения без разрешения.

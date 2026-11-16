@@ -1,62 +1,62 @@
-# ML system card
+# Карточка ML-системы
 
-## Objective
+## Цель
 
-Recommend complete outfits from a user's own wardrobe under hard constraints (availability, activity, weather and required items) while gradually adapting to explicit feedback.
+Подбирать полные образы из собственного гардероба пользователя с учётом строгих ограничений: доступности вещей, активности, погоды и обязательных предметов. Система постепенно адаптируется к явной обратной связи.
 
-This is a decision-support system, not a fashion “ground truth” model. Style preference is subjective and changes with context, so the architecture separates constraints from preference ranking.
+Это система поддержки решений, а не модель «объективно правильной» моды. Стиль субъективен и зависит от контекста, поэтому ограничения отделены от ранжирования предпочтений.
 
-## Inputs and outputs
+## Входные и выходные данные
 
-Inputs include item images and confirmed metadata, occasion, weather, transport, an optional required item, availability, wear history and explicit feedback. The output is up to three outfits with selected item IDs and a short explanation.
+Входные данные: фотографии вещей и подтверждённые характеристики, повод, погода, транспорт, необязательная обязательная вещь, доступность, история носки и оценки. Результат — до трёх образов с ID выбранных вещей и кратким объяснением.
 
-## Hybrid inference
+## Гибридный инференс
 
-### Vision extraction
+### Распознавание по фотографии
 
-Gemini or OpenAI Vision maps a photo to category, color, season, style, warmth, formality, description and confidence. Zod rejects malformed output. The user can edit every prediction before saving it.
+Gemini или OpenAI Vision определяет категорию, цвет, сезон, стиль, теплоту, формальность, описание и уверенность. Zod отклоняет некорректный ответ. Пользователь может изменить все предсказанные поля перед сохранением.
 
-### Deterministic ranker
+### Детерминированный ранжировщик
 
-The local ranker generates structurally valid candidates, scores feature compatibility and applies hard exclusions. It remains available when no AI key exists or model output fails validation.
+Локальный алгоритм создаёт структурно корректные варианты, оценивает совместимость признаков и применяет строгие исключения. Он работает без AI-ключа и используется, если ответ модели не проходит проверку.
 
-### LLM recommendation
+### LLM-рекомендация
 
-The model receives a compact numbered catalog instead of database UUIDs. Returned numbers are checked for range and duplicates, resolved to real items, then validated. Invalid output is retried at most twice with validation feedback before falling back to rules.
+Модель получает компактный нумерованный каталог вместо UUID базы данных. Возвращённые номера проверяются на диапазон и повторы, сопоставляются с реальными вещами, затем проходят предметную валидацию. Некорректный ответ повторяется не более двух раз с описанием ошибки, после чего система переходит к алгоритму на правилах.
 
-## Validation constraints
+## Проверяемые ограничения
 
-- available items only;
-- top + bottom or a one-piece garment;
-- shoes for non-beach outfits;
-- no duplicate primary category;
-- outerwear in cold conditions;
-- no warm everyday layers in beach outfits;
-- training clothes must be sporty or explicitly marked training-suitable;
-- mandatory item must be present;
-- snoozed items cannot reappear through replacement.
+- используются только доступные вещи;
+- нужен верх и низ либо цельный предмет одежды;
+- для непляжных образов нужна обувь;
+- основные категории не дублируются;
+- в холодную погоду требуется верхняя одежда;
+- пляжный образ не содержит тёплые повседневные слои;
+- вещи для тренировки должны быть спортивными или явно отмеченными как подходящие;
+- обязательная вещь должна присутствовать;
+- временно скрытая вещь не может вернуться через замену.
 
-## Personalization
+## Персонализация
 
-Current personalization is intentionally interpretable. Positive ratings add weight to outfit items, negative ratings record rejected combinations, comfort/confidence affect scores, and “rediscover” raises long-unused items.
+Текущая персонализация намеренно интерпретируема. Положительные оценки увеличивают вес вещей, отрицательные сохраняют отклонённые сочетания, комфорт и уверенность влияют на баллы, а режим «давно не носила» повышает приоритет забытых вещей.
 
-This is not called a trained recommender yet: the available single-user feedback is too small and too biased for a defensible learned model.
+Система пока не называется обученной рекомендательной моделью: обратной связи от малого числа пользователей недостаточно для обоснованного обучения.
 
-## Evaluation
+## Оценка
 
-`npm run test:eval` runs a synthetic constraint suite. It checks safety and logic invariants, not subjective style quality.
+Команда `npm run test:eval` запускает синтетический набор проверок ограничений. Он оценивает инварианты безопасности и логики, а не субъективное качество стиля.
 
-Future metrics after anonymized data collection: constraint pass rate, acceptance@1/3, item coverage, intra-list diversity, replacement rate, fallback rate, retry count and vision-field correction rate. A temporal split should prevent future preference leakage. Model and prompt versions should be logged with each prediction.
+Будущие метрики после сбора анонимизированных данных: constraint pass rate, acceptance@1/3, покрытие вещей, внутрисписочное разнообразие, частота замен, fallback rate, число повторных запросов и доля исправленных полей распознавания. Временное разделение выборки должно предотвращать утечку будущих предпочтений. Версии модели и промпта должны сохраняться для каждого предсказания.
 
-## Risks and limitations
+## Риски и ограничения
 
-- Feedback comes from very few users and is not representative.
-- Likes are exposure-biased: unseen items cannot receive feedback.
-- Weather classes simplify wind, humidity and indoor conditions.
-- Product photos do not fully represent fit on a person.
-- LLM explanations are generated text, not causal explanations.
-- Demo fixtures must never be reported as real-world accuracy.
+- Обратная связь поступает от очень малого числа пользователей и нерепрезентативна.
+- Оценки смещены показами: пользователь не может оценить вещи, которые не видел.
+- Погодные классы упрощают влияние ветра, влажности и условий в помещении.
+- Предметные фотографии не показывают посадку одежды на человеке.
+- Текст LLM является сгенерированным объяснением, а не доказательством причинности.
+- Результаты на демоданных нельзя представлять как точность в реальных условиях.
 
-## Responsible data handling
+## Ответственная работа с данными
 
-Wardrobe photos may reveal personal style, location context or body-related information. The public repository contains no real user photos, Telegram IDs or production keys. Any future research dataset should require consent, anonymization, deletion support and a documented retention period.
+Фотографии гардероба могут раскрывать личный стиль, контекст местоположения или информацию, связанную с телом. Публичный репозиторий не содержит настоящих фотографий пользователей, Telegram ID или production-ключей. Будущий исследовательский датасет должен предусматривать согласие, анонимизацию, удаление данных и документированный срок хранения.

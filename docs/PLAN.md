@@ -1,47 +1,47 @@
-# Product and ML roadmap
+# План развития продукта и ML-системы
 
-## Current system
+## Текущее состояние
 
-The application is deployed as a Telegram Mini App and includes wardrobe ingestion, multimodal metadata extraction, hybrid outfit recommendation, feedback, wear history and trip packing.
+Приложение развёрнуто как Telegram Mini App и включает загрузку гардероба, мультимодальное извлечение характеристик, гибридный подбор образов, обратную связь, историю носки и сбор чемодана.
 
-The recommendation path is intentionally hybrid:
+Пайплайн рекомендаций намеренно сделан гибридным:
 
-1. create candidates from available wardrobe items;
-2. apply weather, occasion and activity constraints;
-3. rank candidates using interpretable features and feedback;
-4. optionally request a structured model recommendation;
-5. validate it and fall back to deterministic ranking if necessary.
+1. формирует кандидатов из доступных вещей;
+2. применяет ограничения погоды, повода и активности;
+3. ранжирует кандидатов по интерпретируемым признакам и обратной связи;
+4. при наличии провайдера запрашивает структурированную рекомендацию модели;
+5. проверяет её и при ошибке возвращается к детерминированному ранжированию.
 
-## Near-term priorities
+## Ближайшие приоритеты
 
-### Data quality
+### Качество данных
 
-- Record model/prompt version and user corrections for item extraction.
-- Add consent-aware anonymized event logging.
-- Define stable event schemas for impressions, accepts, replacements and rejects.
-- Keep real photos and user identifiers outside public datasets.
+- Сохранять версию модели, промпта и ручные исправления распознанных характеристик.
+- Добавить анонимизированный журнал событий с учётом согласия пользователя.
+- Определить стабильные схемы событий показов, принятия, замен и отклонений.
+- Не включать настоящие фотографии и идентификаторы пользователей в публичные датасеты.
 
-### Evaluation
+### Оценка
 
-- Expand the synthetic constraint suite to edge cases and adversarial catalogs.
-- Build an anonymized human-rated outfit set.
-- Report acceptance@k, coverage, diversity, replacement rate and fallback rate.
-- Use temporal splits once enough feedback exists.
+- Расширить синтетические проверки пограничными случаями и сложными каталогами.
+- Создать анонимизированный набор образов с человеческими оценками.
+- Измерять acceptance@k, coverage, diversity, replacement rate и fallback rate.
+- После накопления данных использовать временное разделение выборки.
 
-### Modeling
+### Моделирование
 
-- Calibrate confidence for photo-derived attributes.
-- Compare the current hand-tuned ranker with logistic/pairwise ranking baselines.
-- Train only after collecting enough unbiased impression data.
-- Keep hard safety and availability rules outside the learned model.
+- Откалибровать уверенность характеристик, полученных из фотографий.
+- Сравнить текущий ранжировщик с логистическим и pairwise-подходами.
+- Начинать обучение только после накопления достаточных данных о показах.
+- Оставить строгие правила безопасности и доступности вне обучаемой модели.
 
-### Product
+### Продукт
 
-- Replace remaining blocking alerts with non-blocking status messages.
-- Add an account-level data export and deletion flow.
-- Improve trip packing explanations and duplicate control.
-- Add public read-only demo mode with synthetic data.
+- Заменить оставшиеся блокирующие `alert()` неблокирующими уведомлениями.
+- Добавить экспорт и удаление данных аккаунта.
+- Улучшить объяснения сборки чемодана и контроль повторов.
+- Добавить публичный режим просмотра на синтетических данных.
 
-## Definition of done
+## Критерии готовности
 
-A change is complete when tests, lint, type checking and production build pass; trust-boundary inputs are validated; user data is not exposed; and new recommendation logic has at least one deterministic test.
+Изменение готово, когда проходят тесты, линтер, проверка типов и production-сборка; входные данные на границах доверия проверяются; пользовательские данные не раскрываются; новая логика рекомендаций имеет хотя бы один детерминированный тест.

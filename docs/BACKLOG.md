@@ -1,25 +1,25 @@
-# Backlog
+# Бэклог
 
-## ML and analytics
+## ML и аналитика
 
-- [ ] Log anonymized recommendation impressions and outcomes.
-- [ ] Version prompts, models and feature definitions in prediction records.
-- [ ] Add acceptance@1/3, coverage, diversity and fallback dashboards.
-- [ ] Create a consented human-rated evaluation set.
-- [ ] Compare rules with logistic and pairwise ranking baselines.
-- [ ] Track correction rate and calibration for photo metadata extraction.
+- [ ] Сохранять анонимизированные показы рекомендаций и результаты взаимодействия.
+- [ ] Версионировать промпты, модели и определения признаков в записях предсказаний.
+- [ ] Добавить дашборды acceptance@1/3, coverage, diversity и fallback rate.
+- [ ] Создать согласованный с пользователями набор образов с человеческими оценками.
+- [ ] Сравнить правила с логистическим и pairwise-ранжированием.
+- [ ] Отслеживать долю исправлений и калибровку распознавания характеристик по фото.
 
-## Product
+## Продукт
 
-- [ ] Public read-only demo using synthetic fixtures.
-- [ ] Data export and account deletion.
-- [ ] Non-blocking toast notifications instead of `alert()`.
-- [ ] More detailed packing explanations and duplicate limits.
-- [ ] Improve accessibility checks for dialogs and focus management.
+- [ ] Публичный режим просмотра на синтетических данных.
+- [ ] Экспорт данных и удаление аккаунта.
+- [ ] Неблокирующие уведомления вместо `alert()`.
+- [ ] Более подробные объяснения сборки чемодана и ограничения повторов.
+- [ ] Улучшить проверку доступности диалогов и управление фокусом.
 
-## Engineering
+## Разработка
 
-- [ ] Add end-to-end smoke tests for add item → recommend → save.
-- [ ] Add structured observability for retries, fallback and latency.
-- [ ] Review and tighten Supabase RLS before multi-tenant use.
-- [ ] Add migration automation for fresh environments.
+- [ ] Добавить сквозные smoke-тесты сценария «добавить вещь → подобрать образ → сохранить».
+- [ ] Добавить структурированную наблюдаемость повторных запросов, fallback и задержки.
+- [ ] Проверить и ужесточить Supabase RLS перед переходом к нескольким независимым пользователям.
+- [ ] Автоматизировать применение миграций в новом окружении.

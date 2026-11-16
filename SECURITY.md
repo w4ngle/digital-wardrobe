@@ -1,14 +1,14 @@
-# Security and privacy
+# Безопасность и конфиденциальность
 
-Please report vulnerabilities privately through GitHub Security Advisories. Do not open a public issue containing credentials, private photos or user identifiers.
+Сообщайте об уязвимостях приватно через GitHub Security Advisories. Не создавайте публичные issue с учётными данными, личными фотографиями или идентификаторами пользователей.
 
-## Deployment checklist
+## Проверка перед развёртыванием
 
-- Keep all `.env*` files except `.env.example` out of Git.
-- Use server-only keys for Supabase administration and AI providers.
-- Configure `TELEGRAM_ALLOWED_USER_ID` before exposing the Mini App.
-- Set a strong `CRON_SECRET` for scheduled notification routes.
-- Review Supabase RLS and Storage policies for your deployment model.
-- Never seed a public environment with real wardrobe photos without consent.
+- Не добавляйте в Git файлы `.env*`, кроме `.env.example`.
+- Используйте серверные ключи для администрирования Supabase и AI-провайдеров.
+- Настройте `TELEGRAM_ALLOWED_USER_ID` до открытия доступа к Mini App.
+- Задайте надёжный `CRON_SECRET` для маршрутов плановых уведомлений.
+- Проверьте политики Supabase RLS и Storage для своей модели развёртывания.
+- Не загружайте настоящие фотографии гардероба в публичное окружение без согласия владельца.
 
-The hosted demo is allow-listed because wardrobe and wear-history data are personal.
+Доступ к рабочему приложению ограничен списком разрешённых пользователей, поскольку данные гардероба и истории носки являются личными.
