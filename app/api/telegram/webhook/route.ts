@@ -104,7 +104,7 @@ async function handleOutfitAction(token: string, actionData: string, context: {
         reply_markup: { inline_keyboard: [[
           { text: 'Надену сегодня', callback_data: `w:wear:${session.id}` },
           { text: 'Другой образ', callback_data: `w:next:${session.id}` },
-        ], [{ text: 'Не моё', callback_data: `w:nope:${session.id}` }, { text: 'Открыть', web_app: { url: recommendUrl } }]] },
+        ], [{ text: 'Не моё', callback_data: `w:nope:${session.id}` }, { text: 'Открыть приложение', web_app: { url: recommendUrl } }]] },
       })
     }
     await telegram(token, 'answerCallbackQuery', { callback_query_id: context.queryId, text: notice })

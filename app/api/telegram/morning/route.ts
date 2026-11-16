@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       chat_data: JSON.stringify(outfitWidgetState(session.id, outfit.items)),
       caption: morningOutfitMessage(outfit.items),
       allow_queries: true,
-      reply_markup: { inline_keyboard: [[{ text: 'Открыть в приложении', web_app: { url: recommendUrl } }]] },
+      reply_markup: { inline_keyboard: [[{ text: 'Открыть приложение', web_app: { url: recommendUrl } }]] },
     }),
   })
 
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
       reply_markup: { inline_keyboard: [[
         { text: 'Надену сегодня', callback_data: `w:wear:${session.id}` },
         { text: 'Другой образ', callback_data: `w:next:${session.id}` },
-      ], [{ text: 'Не моё', callback_data: `w:nope:${session.id}` }, { text: 'Открыть', web_app: { url: recommendUrl } }]] },
+      ], [{ text: 'Не моё', callback_data: `w:nope:${session.id}` }, { text: 'Открыть приложение', web_app: { url: recommendUrl } }]] },
     }),
   })
   return fallback.ok ? Response.json({ ok: true, widget: false }) : new Response('Telegram API error', { status: 502 })
