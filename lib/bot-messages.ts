@@ -1,4 +1,4 @@
-export const appUrl = 'https://digital-wardrobe-gilt.vercel.app/'
+export const appUrl = 'https://digital-wardrobe-gilt.vercel.app/today'
 
 export const welcomeMessage = `Вот, любимая, это подарок тебе на Новый год 🎁
 

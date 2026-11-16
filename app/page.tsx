@@ -17,6 +17,7 @@ export default function Home() {
   const [filterSeason, setFilterSeason] = useState('')
   const [filterStyle, setFilterStyle] = useState('')
   const [editingItem, setEditingItem] = useState<Item | null>(null)
+  const [visibleCount, setVisibleCount] = useState(30)
   const demoItems = items.filter((item) => item.ai_meta?.demo === true)
 
   useEffect(() => {
@@ -69,6 +70,7 @@ export default function Home() {
     setFilterCategory('')
     setFilterSeason('')
     setFilterStyle('')
+    setVisibleCount(30)
   }
 
   const handleFavorite = async (item: Item) => {
@@ -116,6 +118,7 @@ export default function Home() {
     if (filterStyle && item.style !== filterStyle) return false
     return true
   })
+  const visibleItems = filteredItems.slice(0, visibleCount)
 
   return (
     <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
@@ -159,9 +162,9 @@ export default function Home() {
           category={filterCategory}
           season={filterSeason}
           style={filterStyle}
-          onCategoryChange={setFilterCategory}
-          onSeasonChange={setFilterSeason}
-          onStyleChange={setFilterStyle}
+          onCategoryChange={(value) => { setFilterCategory(value); setVisibleCount(30) }}
+          onSeasonChange={(value) => { setFilterSeason(value); setVisibleCount(30) }}
+          onStyleChange={(value) => { setFilterStyle(value); setVisibleCount(30) }}
           onReset={handleResetFilters}
         />
 
@@ -183,7 +186,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-5 sm:gap-y-7">
-            {filteredItems.map((item) => (
+            {visibleItems.map((item) => (
               <ItemCard
                 key={item.id}
                 item={item}
@@ -199,9 +202,11 @@ export default function Home() {
           </div>
         )}
 
+        {!loading && visibleCount < filteredItems.length && <button type="button" onClick={() => setVisibleCount((count) => count + 30)} className="mx-auto mt-8 block rounded-full border border-[#1f422f] px-6 py-3 text-sm font-semibold text-[#1f422f]">Показать ещё</button>}
+
         {!loading && items.length > 0 && (
           <p className="mt-10 text-center text-xs text-[#9b958a]">
-            Показано {filteredItems.length} из {items.length}
+            Показано {visibleItems.length} из {filteredItems.length}{filteredItems.length !== items.length ? ` · всего ${items.length}` : ''}
           </p>
         )}
       </div>

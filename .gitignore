@@ -46,6 +46,7 @@ next-env.d.ts
 
 # Claude Code artifacts
 .claude/
+.agents/
 
 # Private evaluation data
 eval/private/

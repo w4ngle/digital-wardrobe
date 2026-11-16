@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarBlank, CoatHanger, Sparkle, Stack, Suitcase } from '@phosphor-icons/react'
+import { House, CoatHanger, Sparkle, Stack, Suitcase } from '@phosphor-icons/react'
 
 const links = [
+  { href: '/today', label: 'Сегодня', icon: House },
   { href: '/', label: 'Гардероб', icon: CoatHanger },
   { href: '/recommend', label: 'Подбор', icon: Sparkle },
   { href: '/outfits', label: 'Образы', icon: Stack },
   { href: '/packing', label: 'Чемодан', icon: Suitcase },
-  { href: '/today', label: 'Обзор', icon: CalendarBlank },
 ]
 
 export default function BottomNav() {

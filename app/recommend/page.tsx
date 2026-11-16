@@ -44,6 +44,9 @@ export default function RecommendPage() {
     Promise.all([getItems(), getOutfits()]).then(([loadedItems, loadedOutfits]) => {
       setItems(loadedItems)
       setRatedOutfits(loadedOutfits.filter((outfit) => outfit.rating))
+      const params = new URLSearchParams(window.location.search)
+      if (WEATHER.includes(params.get('weather') as Weather)) setWeather(params.get('weather') as Weather)
+      if (params.get('rain') === '1') setRain(true)
     }).catch(() => alert('Не удалось загрузить гардероб')).finally(() => setLoading(false))
   }, [])
 
@@ -57,6 +60,7 @@ export default function RecommendPage() {
     setAiLoading(true)
     setSaved(null); setLocked({}); setRated({})
     const local = recommendOutfits(items, { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover }, 3, preferences)
+    setResults(local)
     try {
       const requiredNumber = requiredItemId ? items.filter((item) => !item.availability || item.availability === 'available').findIndex((item) => item.id === requiredItemId) + 1 : 0
       const response = await fetch('/api/recommend', {
@@ -112,7 +116,7 @@ export default function RecommendPage() {
 
   async function handleRate(result: OutfitRecommendation, index: number, rating: -1 | 1, feedbackReasons?: string[]) {
     try {
-      const outfit = await createOutfit({ name: `${occasion} · ${style}`, occasion, notes: result.reason, rating, feedback_reasons: feedbackReasons || null }, result.items.map((item) => item.id))
+      const outfit = await createOutfit({ name: `${occasion} · ${style}`, occasion, notes: result.reason, rating, feedback_reasons: feedbackReasons || [] }, result.items.map((item) => item.id))
       setRated((current) => ({ ...current, [index]: rating }))
       setRatedOutfits((current) => [...current, outfit])
       setDislikeIndex(null)

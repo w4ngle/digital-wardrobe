@@ -17,3 +17,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { data, error } = await getSupabaseAdmin().from('trips').update(parsed.data).eq('id', id).select().single()
   return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json(data)
 }
+
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  const { id } = await params
+  const { error } = await getSupabaseAdmin().from('trips').delete().eq('id', id)
+  return error ? NextResponse.json({ error: error.message }, { status: 500 }) : new NextResponse(null, { status: 204 })
+}

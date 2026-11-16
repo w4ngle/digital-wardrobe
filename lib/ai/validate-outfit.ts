@@ -160,7 +160,7 @@ export function validateOutfit(
   errors.push(...checkWarmthForWeather(items, weather))
 
   if (request?.occasion === 'Тренировка') {
-    if (items.some((item) => item.style !== 'Спортивный')) errors.push({ code: 'not_sporty', message: 'Для тренировки нужны только спортивные вещи' })
+    if (items.some((item) => !item.trainingSuitable)) errors.push({ code: 'not_sporty', message: 'Для тренировки нужны только спортивные или отмеченные для тренировки вещи' })
     if (items.some((item) => ['Аксессуар', 'Сумка'].includes(item.category))) errors.push({ code: 'training_extra', message: 'Для тренировки не добавляй аксессуары' })
   }
   if (request?.occasion === 'Пляж / бассейн') {

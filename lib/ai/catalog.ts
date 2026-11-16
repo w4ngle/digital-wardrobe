@@ -17,6 +17,7 @@ export interface CatalogItem {
   subcategory?: string
   length?: string
   fit?: string
+  trainingSuitable?: boolean
 }
 
 /**
@@ -37,6 +38,7 @@ export function buildCatalog(items: Item[]): CatalogItem[] {
     subcategory: item.subcategory || undefined,
     length: item.length || undefined,
     fit: item.fit || undefined,
+    trainingSuitable: item.style === 'Спортивный' || item.training_suitable === true || item.ai_meta?.training_suitable === true,
   }))
 }
 
@@ -48,7 +50,7 @@ export function formatCatalog(catalog: CatalogItem[]): string {
   return catalog
     .map(
       (item) =>
-        `${item.number}|${item.category}${item.subcategory ? `:${item.subcategory}` : ''}|${item.color}|${item.season}|${item.style}|t${item.warmth}|f${item.formality}${item.length ? `|${item.length}` : ''}${item.fit ? `|${item.fit}` : ''}|${item.description}`
+        `${item.number}|${item.category}${item.subcategory ? `:${item.subcategory}` : ''}|${item.color}|${item.season}|${item.style}|t${item.warmth}|f${item.formality}${item.length ? `|${item.length}` : ''}${item.fit ? `|${item.fit}` : ''}${item.trainingSuitable ? '|training' : ''}|${item.description}`
     )
     .join('\n')
 }
