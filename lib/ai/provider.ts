@@ -32,7 +32,6 @@ async function geminiJSON(system: string, user: string, imageDataUrl?: string) {
   if (!text) throw new Error('Gemini returned an empty response')
   return { rawData: JSON.parse(text), model, tokens_in: data.usageMetadata?.promptTokenCount || 0, tokens_out: data.usageMetadata?.candidatesTokenCount || 0 }
 }
-
 // Получение модели из env с fallback
 function getModel(envKey: string, fallback: string): string {
   return process.env[envKey] || fallback
@@ -80,7 +79,6 @@ export async function describeImage(imageDataUrl: string) {
     },
   }
 }
-
 /**
  * Подбор образа через текстовую модель
  */
@@ -134,35 +132,3 @@ export async function chatJSON(params: {
   }
 }
 
-/**
- * Создание эмбеддинга для семантического поиска
- */
-export async function embed(text: string): Promise<number[]> {
-  const openai = getOpenAI()
-  const model = getModel('AI_EMBED_MODEL', 'text-embedding-3-small')
-
-  const response = await openai.embeddings.create({
-    model,
-    input: text,
-  })
-
-  return response.data[0].embedding
-}
-
-/**
- * Генерация изображения образа (опционально, дорого)
- */
-export async function renderImage(prompt: string): Promise<string> {
-  const openai = getOpenAI()
-  const model = getModel('AI_IMAGE_MODEL', 'dall-e-3')
-
-  const response = await openai.images.generate({
-    model,
-    prompt,
-    n: 1,
-    size: '1024x1024',
-    quality: 'standard',
-  })
-
-  return response.data?.[0]?.url || ''
-}

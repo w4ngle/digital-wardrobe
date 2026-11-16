@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { allowedTelegramUserIds, currentTelegramUserId, hasValidSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { signItemPhotos } from '@/lib/server-photos'
+import { Item } from '@/lib/supabase'
 
 const OutfitInput = z.object({
   outfit: z.object({
@@ -10,7 +11,7 @@ const OutfitInput = z.object({
     occasion: z.string().trim().max(100).nullable(),
     notes: z.string().trim().max(500).nullable(),
     rating: z.union([z.literal(-1), z.literal(1)]).nullable().optional(),
-    feedback_reasons: z.array(z.string().trim().min(1).max(80)).max(5).nullable().optional(),
+    feedback_reasons: z.preprocess((value) => value ?? [], z.array(z.string().trim().min(1).max(80)).max(5)),
     suggested_by_name: z.string().trim().min(1).max(60).nullable().optional(),
     partner_message: z.string().trim().max(300).nullable().optional(),
   }),
@@ -21,15 +22,15 @@ export async function GET() {
   if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
 
   const admin = getSupabaseAdmin()
-  const { data: outfits, error } = await admin.from('outfits').select('*').order('created_at', { ascending: false })
+  const { data: outfits, error } = await admin.from('outfits').select('*, outfit_items(item:items(*))').order('created_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const result = await Promise.all((outfits || []).map(async (outfit) => {
-    const { data: links } = await admin.from('outfit_items').select('item_id').eq('outfit_id', outfit.id)
-    const ids = links?.map((link) => link.item_id) || []
-    if (ids.length === 0) return { ...outfit, items: [] }
-    const { data: items } = await admin.from('items').select('*').in('id', ids)
-    return { ...outfit, items: await signItemPhotos(items || []) }
+  const allItems = (outfits || []).flatMap((outfit) => outfit.outfit_items.map((link: { item: Item | null }) => link.item).filter((item: Item | null): item is Item => Boolean(item)))
+  const signedItems = await signItemPhotos(allItems)
+  const signedById = new Map(signedItems.map((item) => [item.id, item]))
+  const result = (outfits || []).map(({ outfit_items, ...outfit }) => ({
+    ...outfit,
+    items: outfit_items.map((link: { item: Item | null }) => link.item && signedById.get(link.item.id)).filter(Boolean),
   }))
 
   return NextResponse.json(result)

@@ -32,6 +32,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
   const [formality, setFormality] = useState(item.formality ?? 3)
   const [needsUnderlayer, setNeedsUnderlayer] = useState(Boolean(item.needs_underlayer))
   const [rainSafe, setRainSafe] = useState(Boolean(item.rain_safe))
+  const [trainingSuitable, setTrainingSuitable] = useState(Boolean(item.training_suitable || item.ai_meta?.training_suitable))
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(item.photo_url)
   const [loading, setLoading] = useState(false)
@@ -82,7 +83,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
         custom_name: customName.trim() || null,
         fit: supportsFit(category) ? fit : null, length: supportsLength(category, subcategory) ? length || null : null, pattern, layer_role: layerRole,
         warmth: supportsWarmth(category) && !Number.isNaN(warmth) ? warmth : null, formality,
-        comfort, confidence, needs_underlayer: needsUnderlayer, rain_safe: rainSafe,
+        comfort, confidence, needs_underlayer: needsUnderlayer, rain_safe: rainSafe, ai_meta: { ...(item.ai_meta || {}), training_suitable: trainingSuitable || style === 'Спортивный' },
       })
       onClose()
     } catch (error) {
@@ -185,6 +186,7 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
             <div className="space-y-3 rounded-2xl bg-[#f3ede4] p-4">
               <label className="flex items-start gap-3 text-sm leading-5"><input type="checkbox" checked={needsUnderlayer} onChange={(e) => setNeedsUnderlayer(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" /><span>Нужен особый нижний слой</span></label>
               {(category === 'Обувь' || category === 'Верхняя одежда') && <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={rainSafe} onChange={(e) => setRainSafe(e.target.checked)} className="h-5 w-5" />Подходит для дождя</label>}
+              {['Верх', 'Низ', 'Комплект', 'Обувь', 'Верхняя одежда'].includes(category) && <label className="flex items-center gap-3 text-sm"><input type="checkbox" checked={trainingSuitable} onChange={(e) => setTrainingSuitable(e.target.checked)} className="h-5 w-5" />Подходит для тренировки</label>}
             </div>
 
             <div className="flex gap-3 pt-2">

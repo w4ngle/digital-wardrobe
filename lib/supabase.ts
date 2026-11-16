@@ -24,6 +24,7 @@ export type Item = {
   confidence?: number | null
   needs_underlayer?: boolean
   rain_safe?: boolean
+  training_suitable?: boolean
   snoozed_until?: string | null
   laundry_return_at?: string | null
   wears_since_wash?: number

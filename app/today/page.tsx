@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { getItems, getOutfits, getWearHistory, updateItem, updateOutfit } from '@/lib/api'
+import { getItems, getOutfits, getWearHistory, markItemWorn, updateItem, updateOutfit } from '@/lib/api'
 import { Item, OutfitWithItems, WearRecord } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
 import { Cloud, Sparkle } from '@phosphor-icons/react'
@@ -28,6 +28,8 @@ export default function TodayPage() {
   const [openedItems, setOpenedItems] = useState<Item[] | null>(null)
   const [openedTitle, setOpenedTitle] = useState('')
   const [openedFavorite, setOpenedFavorite] = useState<{ type: 'item' | 'outfit', id: string } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [wearing, setWearing] = useState(false)
 
   function openDetails(title: string, detailItems: Item[], favorite?: { type: 'item' | 'outfit', id: string }) {
     setOpenedTitle(title)
@@ -60,12 +62,14 @@ export default function TodayPage() {
         setHistory(loadedHistory)
       })
       .catch(() => alert('Не удалось загрузить данные'))
+      .finally(() => setLoading(false))
   }, [])
 
   const favoriteItems = items.filter((item) => item.is_favorite)
   const usableOutfits = outfits.filter((outfit) => outfit.rating !== -1)
   const favoriteOutfits = usableOutfits.filter((outfit) => outfit.is_favorite || outfit.rating === 1)
-  const planned = usableOutfits.filter((outfit) => outfit.planned_for).sort((a, b) => a.planned_for!.localeCompare(b.planned_for!))
+  const today = new Date().toISOString().slice(0, 10)
+  const planned = usableOutfits.filter((outfit) => outfit.planned_for && outfit.planned_for >= today).sort((a, b) => a.planned_for!.localeCompare(b.planned_for!))
   const heroOutfit = planned[0] || favoriteOutfits[0] || usableOutfits[0]
   const totalWears = items.reduce((sum, item) => sum + (item.wear_count || 0), 0)
   const mostWorn = [...items].sort((a, b) => (b.wear_count || 0) - (a.wear_count || 0))[0]
@@ -84,6 +88,17 @@ export default function TodayPage() {
     })
     return [...pairs.values()].sort((a, b) => b.count - a.count)[0]
   }, [outfits])
+
+  async function wearHeroOutfit() {
+    if (!heroOutfit || wearing) return
+    setWearing(true)
+    try {
+      const worn = await Promise.all(heroOutfit.items.map((item) => markItemWorn(item.id)))
+      const byId = new Map(worn.map((item) => [item.id, item]))
+      setItems((current) => current.map((item) => byId.get(item.id) || item))
+      alert('Образ отмечен как надетый сегодня')
+    } catch { alert('Не удалось отметить образ') } finally { setWearing(false) }
+  }
 
   async function fetchWeather(latitude: number, longitude: number) {
     try {
@@ -145,14 +160,14 @@ export default function TodayPage() {
       <div className="mx-auto max-w-4xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
         <header className="mb-7">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#81786d]">Мой гардероб</p>
-          <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Мой обзор</h1>
+          <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Сегодня</h1>
         </header>
 
         <section className="mb-6 rounded-[28px] bg-[#1f422f] p-5 text-white">
           {weather ? (
             <div className="flex items-center justify-between gap-4">
               <div><p className="text-sm text-white/70">Сейчас · {weatherLabel(weather.code)}</p><p className="mt-1 text-4xl font-semibold">{weather.temperature}°</p><p className="mt-1 text-xs text-white/60">Ощущается как {weather.apparent}°</p></div>
-              <Link href="/recommend" className="rounded-full bg-[#fffaf2] px-4 py-3 text-sm font-semibold text-[#1f422f]">Подобрать образ</Link>
+              <Link href={`/recommend?weather=${encodeURIComponent(weather.temperature >= 20 ? 'Тепло' : weather.temperature <= 5 ? 'Холодно' : 'Прохладно')}${weather.code >= 51 && weather.code <= 67 ? '&rain=1' : ''}`} className="rounded-full bg-[#fffaf2] px-4 py-3 text-sm font-semibold text-[#1f422f]">Подобрать образ</Link>
             </div>
           ) : (
             <div className="flex items-center justify-between gap-4"><div className="flex items-start gap-3"><Cloud size={28} className="mt-0.5 shrink-0" aria-hidden /><div><h2 className="font-semibold">Погода рядом</h2><p className="mt-1 text-sm text-white/65">Поможет выбрать одежду по температуре</p></div></div><button onClick={loadWeather} disabled={weatherLoading} className="shrink-0 rounded-full bg-[#fffaf2] px-4 py-3 text-sm font-semibold text-[#1f422f] disabled:opacity-60">{weatherLoading ? 'Загрузка…' : 'Показать'}</button></div>
@@ -164,14 +179,14 @@ export default function TodayPage() {
             <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6f1820]">Подборка</p><h2 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#6f1820]">Образ дня</h2></div>
             <Sparkle size={28} className="text-[#6f1820]" weight="duotone" aria-hidden />
           </div>
-          {heroOutfit ? <OutfitCollage items={heroOutfit.items} /> : <div className="px-5 pb-6 text-sm text-[#81786d]">Собери первый образ — и он появится здесь.</div>}
-          <div className="p-4"><Link href="/recommend" className="block rounded-full bg-[#1f422f] px-5 py-3.5 text-center text-sm font-semibold text-white">Подобрать другой образ</Link></div>
+          {loading ? <div className="mx-5 mb-5 h-48 animate-pulse rounded-2xl bg-[#e6e1d8]" /> : heroOutfit ? <OutfitCollage items={heroOutfit.items} /> : <div className="px-5 pb-6 text-sm text-[#81786d]">Собери первый образ — и он появится здесь.</div>}
+          <div className="grid gap-2 p-4 sm:grid-cols-2">{heroOutfit && <button type="button" onClick={wearHeroOutfit} disabled={wearing} className="rounded-full border border-[#1f422f] px-5 py-3.5 text-sm font-semibold text-[#1f422f] disabled:opacity-50">{wearing ? 'Отмечаем…' : 'Надену этот образ'}</button>}<Link href="/recommend" className="block rounded-full bg-[#1f422f] px-5 py-3.5 text-center text-sm font-semibold text-white">Подобрать другой образ</Link></div>
         </section>
 
         <section className="mb-7 grid grid-cols-3 gap-2">
-          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{items.length}</p><p className="mt-1 text-[10px] text-[#81786d]">Вещей</p></div>
-          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{totalWears}</p><p className="mt-1 text-[10px] text-[#81786d]">Надеваний</p></div>
-          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{favoriteItems.length + favoriteOutfits.length}</p><p className="mt-1 text-[10px] text-[#81786d]">Избранных</p></div>
+          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{loading ? '—' : items.length}</p><p className="mt-1 text-[10px] text-[#81786d]">Вещей</p></div>
+          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{loading ? '—' : totalWears}</p><p className="mt-1 text-[10px] text-[#81786d]">Надеваний</p></div>
+          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{loading ? '—' : favoriteItems.length + favoriteOutfits.length}</p><p className="mt-1 text-[10px] text-[#81786d]">Избранных</p></div>
         </section>
 
         <section className="mb-7">

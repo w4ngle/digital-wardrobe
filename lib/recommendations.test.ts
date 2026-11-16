@@ -172,4 +172,26 @@ describe('recommendOutfits', () => {
     expect(result.items.map((candidate) => candidate.id)).not.toContain('jacket')
     expect(result.items.map((candidate) => candidate.id)).not.toContain('belt')
   })
+
+  it('allows explicitly marked training clothes but excludes ordinary clothes', () => {
+    const [result] = recommendOutfits([
+      { ...item('marked-top', 'Верх', 'белый'), training_suitable: true },
+      item('ordinary-top', 'Верх', 'черный'),
+      item('sport-bottom', 'Низ', 'черный', 'Спортивный'),
+      item('sport-shoes', 'Обувь', 'белый', 'Спортивный'),
+    ], { occasion: 'Тренировка', weather: 'Тепло', style: 'Спортивный' })
+
+    expect(result.items.map((candidate) => candidate.id)).toContain('marked-top')
+    expect(result.items.map((candidate) => candidate.id)).not.toContain('ordinary-top')
+  })
+
+  it('keeps a required available item even when it ranks below the category limit', () => {
+    const wardrobe = [
+      ...Array.from({ length: 7 }, (_, index) => ({ ...item(`top-${index}`, 'Верх', 'белый'), confidence: 5 - Math.min(index, 4) })),
+      item('bottom', 'Низ', 'черный'),
+    ]
+    const [result] = recommendOutfits(wardrobe, { occasion: 'На каждый день', weather: 'Тепло', style: 'Повседневный', requiredItemId: 'top-6' }, 1)
+
+    expect(result.items.map((candidate) => candidate.id)).toContain('top-6')
+  })
 })

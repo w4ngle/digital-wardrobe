@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createTrip, getItems, getTrips, updateTrip } from '@/lib/api'
+import { createTrip, deleteTrip, getItems, getTrips, updateTrip } from '@/lib/api'
 import { Item, Trip } from '@/lib/supabase'
 import { buildPackingList, OutfitRecommendation, recommendOutfits, replaceOutfitItem, WEATHER, Weather } from '@/lib/recommendations'
 import { CATEGORIES, STYLES } from '@/lib/taxonomy'
 import FastImage from '@/components/FastImage'
+import { TRIP_TYPES, tripPreset } from '@/lib/trips'
 
 type CityOption = { id: number, name: string, country?: string, admin1?: string, latitude: number, longitude: number }
 
@@ -66,6 +67,20 @@ export default function PackingPage() {
     if (!label || checklistEntries.includes(label)) return
     setChecklistEntries((current) => [...current, label])
     setNewChecklistEntry('')
+  }
+
+  function selectTripType(value: string) {
+    const preset = tripPreset(value)
+    setTripType(value); setBeach(preset.beach); setTraining(preset.training); setLaundry(preset.laundry); setBaggage(preset.baggage); setStyle(preset.style)
+  }
+
+  async function removeTrip(id: string) {
+    if (!confirm('Удалить эту поездку?')) return
+    try {
+      await deleteTrip(id)
+      setTrips((current) => current.filter((trip) => trip.id !== id))
+      if (currentTripId === id) setCurrentTripId(null)
+    } catch { alert('Не удалось удалить поездку') }
   }
 
   async function searchCity() {
@@ -176,11 +191,11 @@ export default function PackingPage() {
         <button type="button" onClick={() => setMode('auto')} className={`rounded-xl px-3 py-3 text-sm font-semibold ${mode === 'auto' ? 'bg-white text-[#1f422f] shadow-sm' : 'text-[#70685e]'}`}>Собрать автоматически</button>
         <button type="button" onClick={() => setMode('manual')} className={`rounded-xl px-3 py-3 text-sm font-semibold ${mode === 'manual' ? 'bg-white text-[#1f422f] shadow-sm' : 'text-[#70685e]'}`}>Выбрать вручную</button>
       </div>
-      {trips.length > 0 && <section className="mb-5"><h2 className="mb-2 text-sm font-semibold">Сохранённые поездки</h2><div className="flex gap-2 overflow-x-auto pb-1">{trips.map((trip) => <button type="button" key={trip.id} onClick={() => loadTrip(trip)} className="shrink-0 rounded-full border border-[#ddd7cc] bg-white px-4 py-2 text-xs">{trip.name}</button>)}</div></section>}
+      {trips.length > 0 && <section className="mb-5"><h2 className="mb-2 text-sm font-semibold">Сохранённые поездки</h2><div className="flex gap-2 overflow-x-auto pb-1">{trips.map((trip) => <div key={trip.id} className="flex shrink-0 overflow-hidden rounded-full border border-[#ddd7cc] bg-white"><button type="button" onClick={() => loadTrip(trip)} className="px-4 py-2 text-xs">{trip.name}</button><button type="button" onClick={() => removeTrip(trip.id)} className="min-h-10 min-w-10 border-l border-[#ddd7cc] text-[#6f1820]" aria-label={`Удалить поездку ${trip.name}`}>×</button></div>)}</div></section>}
       {mode === 'auto' ? <section className="space-y-4 rounded-[24px] border border-[#dfd4c4] bg-[#fffaf2] p-4">
-        <label className="block text-sm font-semibold">Тип поездки<select value={tripType} onChange={(event) => setTripType(event.target.value)} className="mt-2 w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-3 font-normal">{['Море', 'Горы', 'Соревнования', 'Сборы', 'Короткая поездка'].map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label className="block text-sm font-semibold">Тип поездки<select value={tripType} onChange={(event) => selectTripType(event.target.value)} className="mt-2 w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-3 font-normal">{TRIP_TYPES.map((value) => <option key={value}>{value}</option>)}</select></label>
         <div><label className="block text-sm font-semibold">Город</label><div className="mt-2 flex gap-2"><input value={city} onChange={(event) => { setCity(event.target.value); setSelectedCity(null); setCityOptions([]) }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void searchCity() } }} placeholder="Например, Сочи" className="min-w-0 flex-1 rounded-xl border border-[#ddd7cc] bg-white px-3 py-3 font-normal" /><button type="button" onClick={searchCity} disabled={cityLoading || city.trim().length < 2} className="shrink-0 rounded-xl bg-[#1f422f] px-4 text-sm font-semibold text-white disabled:opacity-40">{cityLoading ? 'Ищу…' : 'Найти'}</button></div>{cityOptions.length > 0 && <div className="mt-2 space-y-1 rounded-xl border border-[#ddd7cc] bg-white p-1">{cityOptions.map((option) => <button type="button" key={option.id} onClick={() => { setSelectedCity(option); setCity(option.name); setCityOptions([]); setForecast('') }} className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-[#f3ede4]">{option.name}{option.admin1 ? `, ${option.admin1}` : ''}{option.country ? ` · ${option.country}` : ''}</button>)}</div>}<p className={`mt-2 text-xs ${selectedCity ? 'text-[#52635a]' : 'text-[#817b70]'}`}>{selectedCity ? `Выбран: ${selectedCity.name}${selectedCity.country ? `, ${selectedCity.country}` : ''}` : 'Введите название, нажмите «Найти» и выберите город'}</p></div>
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2"><label className="block min-w-0 overflow-hidden text-sm font-semibold">С<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="mt-2 block w-full max-w-full min-w-0 appearance-none rounded-xl border border-[#ddd7cc] bg-white px-2 py-3 text-base font-normal" /></label><label className="block min-w-0 overflow-hidden text-sm font-semibold">По<input type="date" value={endDate} min={startDate} onChange={(event) => { setEndDate(event.target.value); if (startDate && event.target.value) setDays(Math.max(1, Math.round((new Date(event.target.value).getTime() - new Date(startDate).getTime()) / 86400000) + 1)) }} className="mt-2 block w-full max-w-full min-w-0 appearance-none rounded-xl border border-[#ddd7cc] bg-white px-2 py-3 text-base font-normal" /></label></div>
+        <div className="grid min-w-0 grid-cols-2 gap-2"><label className="block min-w-0 overflow-hidden text-sm font-semibold">С<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="mt-2 block w-full max-w-full min-w-0 appearance-none rounded-xl border border-[#ddd7cc] bg-white px-1.5 py-3 text-sm font-normal" /></label><label className="block min-w-0 overflow-hidden text-sm font-semibold">По<input type="date" value={endDate} min={startDate} onChange={(event) => { setEndDate(event.target.value); if (startDate && event.target.value) setDays(Math.max(1, Math.round((new Date(event.target.value).getTime() - new Date(startDate).getTime()) / 86400000) + 1)) }} className="mt-2 block w-full max-w-full min-w-0 appearance-none rounded-xl border border-[#ddd7cc] bg-white px-1.5 py-3 text-sm font-normal" /></label></div>
         <label className="block text-sm font-semibold">На сколько дней<input type="number" min="1" max="30" required value={Number.isNaN(days) ? '' : days} onChange={(event) => setDays(event.target.value === '' ? Number.NaN : event.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-3 font-normal" /></label>
         <label className="block text-sm font-semibold">Вечерних выходов<input type="number" min="0" max="14" value={Number.isNaN(evenings) ? '' : evenings} onChange={(event) => setEvenings(event.target.value === '' ? Number.NaN : event.target.valueAsNumber)} className="mt-2 w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-3 font-normal" /></label>
         <label className="block text-sm font-semibold">Погода<select value={weather} onChange={(event) => setWeather(event.target.value as Weather)} className="mt-2 w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-3 font-normal">{WEATHER.map((option) => <option key={option}>{option}</option>)}</select></label>

@@ -84,4 +84,8 @@ export function updateTrip(id: string, updates: Partial<Pick<Trip, 'details' | '
   return api<Trip>(`/api/trips/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) })
 }
 
+export function deleteTrip(id: string) {
+  return api<void>(`/api/trips/${id}`, { method: 'DELETE' })
+}
+
 export function getWearHistory() { return api<WearRecord[]>('/api/wear-history') }

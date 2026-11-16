@@ -24,7 +24,7 @@ cp .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=your-project-url.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-GEMINI_API_KEY=your-free-google-ai-studio-key
+GEMINI_API_KEY=your-google-ai-studio-key
 ```
 
 4. Запустите приложение:
@@ -70,7 +70,7 @@ npm run dev
 - TypeScript
 - Tailwind CSS 4
 - Supabase (PostgreSQL + Storage + Auth)
-- Gemini API (бесплатный лимит Google AI Studio) для анализа фото и подбора образов; OpenAI остаётся резервным провайдером
+- Gemini API для анализа фото и подбора образов; OpenAI остаётся резервным провайдером
 - Vitest (тестирование)
 
 ## Архитектура

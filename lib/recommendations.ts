@@ -115,27 +115,31 @@ function itemIdentity(item: Item) {
 export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 3, preferences: OutfitPreferences = {}): OutfitRecommendation[] {
   const today = new Date().toISOString().slice(0, 10)
   const availableItems = items.filter((item) => (!item.availability || item.availability === 'available') && (!item.snoozed_until || item.snoozed_until < today))
-  const byCategory = (category: string) => availableItems
+  const byCategory = (category: string) => {
+    const ranked = availableItems
     .filter((item) => item.category === category)
     .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))
     .filter((item, index, sorted) => sorted.findIndex((candidate) => itemIdentity(candidate) === itemIdentity(item)) === index)
-    .slice(0, 5)
+    const required = request.requiredItemId && ranked.find((item) => item.id === request.requiredItemId)
+    return [...ranked.slice(0, 5), ...(required && !ranked.slice(0, 5).some((item) => item.id === required.id) ? [required] : [])]
+  }
 
   const isBeach = request.occasion === 'Пляж / бассейн'
   const isTraining = request.occasion === 'Тренировка'
 
-  const tops = byCategory('Верх').filter((item) => item.layer_role !== 'Второй слой')
-  const bottoms = byCategory('Низ')
-  const shoes: Array<Item | null> = byCategory('Обувь').filter((item) => !isBeach || ['Сандалии', 'Босоножки', 'Обувь на платформе'].includes(item.subcategory || ''))
+  const suitableForTraining = (item: Item) => item.id === request.requiredItemId || item.style === 'Спортивный' || item.training_suitable === true || item.ai_meta?.training_suitable === true
+  const tops = byCategory('Верх').filter((item) => item.layer_role !== 'Второй слой' && (!isTraining || suitableForTraining(item)))
+  const bottoms = byCategory('Низ').filter((item) => !isTraining || suitableForTraining(item))
+  const shoes: Array<Item | null> = byCategory('Обувь').filter((item) => (!isTraining || suitableForTraining(item)) && (!isBeach || ['Сандалии', 'Босоножки', 'Обувь на платформе'].includes(item.subcategory || '')))
   if (shoes.length === 0) shoes.push(null)
 
-  const outerwearItems = byCategory('Верхняя одежда').filter((item) => !isTraining || item.style === 'Спортивный')
+  const outerwearItems = byCategory('Верхняя одежда').filter((item) => !isTraining || suitableForTraining(item))
   const outerwear: Array<Item | null> = isBeach || request.weather === 'Тепло'
     ? [null]
     : outerwearItems.length > 0 ? outerwearItems : [null]
   const secondLayers: Array<Item | null> = isBeach
     ? [null, ...byCategory('Верх').filter((item) => item.subcategory === 'Пляжная накидка').slice(0, 2)]
-    : request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой' && (!isTraining || item.style === 'Спортивный')).slice(0, 2)]
+    : request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой' && (!isTraining || suitableForTraining(item))).slice(0, 2)]
   const accessories = byCategory('Аксессуар').filter((item) => !isBeach || ['Очки', 'Головной убор'].includes(item.subcategory || ''))
   const extras: Array<Item | null> = isTraining ? [null] : [null, ...byCategory('Сумка').filter((item) => !isBeach || item.subcategory === 'Пляжная сумка').slice(0, 2), ...accessories.slice(0, 2)]
   const candidates = new Map<string, OutfitRecommendation>()
@@ -144,8 +148,8 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
   if (isBeach) byCategory('Купальник').forEach((item) => cores.push([item]))
   else {
     for (const top of tops) for (const bottom of bottoms) cores.push([top, bottom])
-    byCategory('Платье').forEach((item) => cores.push([item]))
-    byCategory('Комплект').forEach((item) => cores.push([item]))
+    byCategory('Платье').filter((item) => !isTraining || suitableForTraining(item)).forEach((item) => cores.push([item]))
+    byCategory('Комплект').filter((item) => !isTraining || suitableForTraining(item)).forEach((item) => cores.push([item]))
   }
 
   for (const core of cores) {
@@ -177,7 +181,7 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
 
   if (candidates.size === 0) {
     if (isBeach) return []
-    const fallback = [...availableItems]
+    const fallback = availableItems.filter((item) => !isTraining || suitableForTraining(item))
       .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))
       .filter((item, index, sorted) => sorted.findIndex((candidate) => candidate.category === item.category) === index)
       .slice(0, 4)
@@ -218,8 +222,9 @@ export function replaceOutfitItem(items: Item[], result: OutfitRecommendation, i
   const current = result.items.find((item) => item.id === itemId)
   if (!current) return result
   const used = new Set(result.items.map((item) => item.id))
+  const today = new Date().toISOString().slice(0, 10)
   const replacement = items
-    .filter((item) => item.category === current.category && !used.has(item.id) && (!item.availability || item.availability === 'available'))
+    .filter((item) => item.category === current.category && !used.has(item.id) && (!item.availability || item.availability === 'available') && (!item.snoozed_until || item.snoozed_until < today) && (request.occasion !== 'Тренировка' || item.style === 'Спортивный' || item.training_suitable === true || item.ai_meta?.training_suitable === true))
     .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))[0]
   return replacement ? { ...result, items: result.items.map((item) => item.id === itemId ? replacement : item) } : result
 }

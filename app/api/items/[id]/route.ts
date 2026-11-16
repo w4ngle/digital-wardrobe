@@ -12,6 +12,7 @@ const ItemUpdate = z.object({
   season: z.enum(SEASONS).optional(),
   style: z.enum(STYLES).optional(),
   description: z.string().trim().max(200).nullable().optional(),
+  ai_meta: z.record(z.string(), z.unknown()).nullable().optional(),
   warmth: z.number().int().min(1).max(5).nullable().optional(),
   formality: z.number().int().min(1).max(5).nullable().optional(),
   is_favorite: z.boolean().optional(),
@@ -52,7 +53,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
 
   const { id } = await params
-  const { error } = await getSupabaseAdmin().from('items').delete().eq('id', id)
+  const admin = getSupabaseAdmin()
+  const { data: item } = await admin.from('items').select('photo_url').eq('id', id).single()
+  const { error } = await admin.from('items').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const path = photoPath(item?.photo_url || null)
+  if (path) await admin.storage.from('wardrobe-items').remove([path])
   return new NextResponse(null, { status: 204 })
 }
