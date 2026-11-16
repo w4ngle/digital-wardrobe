@@ -4,6 +4,7 @@ import { allowedTelegramUserIds, currentTelegramUserId, hasValidSession } from '
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { signItemPhotos } from '@/lib/server-photos'
 import { Item } from '@/lib/supabase'
+import { outfitsUrl } from '@/lib/bot-messages'
 
 const OutfitInput = z.object({
   outfit: z.object({
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         chat_id: allowedTelegramUserIds()[0],
         text: `Тебе предложили новый образ 💌\n\n${parsed.data.outfit.suggested_by_name || 'Любимый'}: ${parsed.data.outfit.partner_message || parsed.data.outfit.name}`,
-        reply_markup: { inline_keyboard: [[{ text: 'Посмотреть', web_app: { url: 'https://digital-wardrobe-gilt.vercel.app/outfits' } }]] },
+        reply_markup: { inline_keyboard: [[{ text: 'Посмотреть', web_app: { url: outfitsUrl } }]] },
       }),
     })
   }

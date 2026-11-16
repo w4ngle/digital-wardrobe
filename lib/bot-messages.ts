@@ -1,6 +1,9 @@
-export const appUrl = 'https://digital-wardrobe-gilt.vercel.app/today'
+export const appUrl = 'https://digital-wardrobe-gilt.vercel.app'
+export const todayUrl = `${appUrl}/today`
+export const recommendUrl = `${appUrl}/recommend`
+export const outfitsUrl = `${appUrl}/outfits`
 
-export const welcomeMessage = `Вот, любимая, это подарок тебе на Новый год 🎁
+export const welcomeMessage = `Вот, любимая, это подарок тебе 🎁
 
 Я сделал для тебя личный цифровой гардероб. Здесь можно хранить вещи, собирать образы и быстро решать, что надеть.
 

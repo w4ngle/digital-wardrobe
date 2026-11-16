@@ -1,4 +1,4 @@
-import { appUrl, morningOutfitMessage } from '@/lib/bot-messages'
+import { morningOutfitMessage, recommendUrl } from '@/lib/bot-messages'
 import { recommendOutfits, Weather } from '@/lib/recommendations'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isCronRequest } from '@/lib/cron-auth'
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     body: JSON.stringify({
       chat_id: chatId,
       text: morningOutfitMessage(outfit.items),
-      reply_markup: { inline_keyboard: [[{ text: 'Посмотреть образ ✨', web_app: { url: `${appUrl}recommend` } }]] },
+      reply_markup: { inline_keyboard: [[{ text: 'Посмотреть образ ✨', web_app: { url: recommendUrl } }]] },
     }),
   })
 

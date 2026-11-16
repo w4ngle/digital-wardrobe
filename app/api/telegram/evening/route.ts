@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isCronRequest } from '@/lib/cron-auth'
+import { todayUrl } from '@/lib/bot-messages'
 
 export async function GET(request: Request) {
   if (!isCronRequest(request)) return new Response('Unauthorized', { status: 401 })
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
       text: `Солнышко, отправить сегодняшние вещи в стирку? 🧺\n\n${list}`,
       reply_markup: { inline_keyboard: [
         [{ text: 'Да, в стирку', callback_data: 'laundry:all' }, { text: 'Нет, ещё надену', callback_data: 'laundry:none' }],
-        [{ text: 'Открыть обзор', web_app: { url: 'https://digital-wardrobe-gilt.vercel.app/today' } }],
+        [{ text: 'Открыть обзор', web_app: { url: todayUrl } }],
       ] },
     }),
   })

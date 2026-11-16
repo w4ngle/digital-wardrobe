@@ -1,4 +1,4 @@
-import { appUrl, botReply } from '@/lib/bot-messages'
+import { botReply, todayUrl } from '@/lib/bot-messages'
 import { allowedTelegramUserIds } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       chat_id: message.chat.id,
       text: botReply(message.text),
       reply_markup: {
-        inline_keyboard: [[{ text: 'Открыть гардероб', web_app: { url: appUrl } }]],
+        inline_keyboard: [[{ text: 'Открыть гардероб', web_app: { url: todayUrl } }]],
       },
     }),
   })
