@@ -4,7 +4,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { OutfitRequest, recommendOutfits } from '@/lib/recommendations'
 import { Item } from '@/lib/supabase'
 import { outfitWidgetState, parseOutfitWidgetAction } from '@/lib/telegram-widget'
-import { morningOutfitMessage, recommendUrl } from '@/lib/bot-messages'
+import { appUrl, morningOutfitMessage, recommendUrl } from '@/lib/bot-messages'
+import { outfitCardToken } from '@/lib/outfit-card-token'
 
 type TelegramUpdate = {
   message?: {
@@ -99,8 +100,9 @@ async function handleOutfitAction(token: string, actionData: string, context: {
     await telegram(token, 'answerWidgetQuery', { widget_query_id: context.queryId, data: JSON.stringify({ notice }) })
   } else {
     if (context.chatId && context.messageId && parsed.action === 'next' && status === 'ready') {
-      await telegram(token, 'editMessageText', {
-        chat_id: context.chatId, message_id: context.messageId, text: morningOutfitMessage(items),
+      await telegram(token, 'editMessageMedia', {
+        chat_id: context.chatId, message_id: context.messageId,
+        media: { type: 'photo', media: `${appUrl}/api/telegram/outfit-card/${session.id}?token=${outfitCardToken(session.id)}&v=${Date.now()}`, caption: morningOutfitMessage(items) },
         reply_markup: { inline_keyboard: [[
           { text: 'Надену сегодня', callback_data: `w:wear:${session.id}` },
           { text: 'Другой образ', callback_data: `w:next:${session.id}` },

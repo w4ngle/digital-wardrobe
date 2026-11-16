@@ -1,8 +1,9 @@
-import { morningOutfitMessage, recommendUrl } from '@/lib/bot-messages'
+import { appUrl, morningOutfitMessage, recommendUrl } from '@/lib/bot-messages'
 import { recommendOutfits, Weather } from '@/lib/recommendations'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isCronRequest } from '@/lib/cron-auth'
 import { outfitWidgetHtml, outfitWidgetState } from '@/lib/telegram-widget'
+import { outfitCardToken } from '@/lib/outfit-card-token'
 
 export async function GET(request: Request) {
   if (!isCronRequest(request)) return new Response('Unauthorized', { status: 401 })
@@ -56,9 +57,9 @@ export async function GET(request: Request) {
 
   if (response.ok) return Response.json({ ok: true, widget: true })
 
-  const fallback = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  const fallback = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-      chat_id: chatId, text: morningOutfitMessage(outfit.items),
+      chat_id: chatId, photo: `${appUrl}/api/telegram/outfit-card/${session.id}?token=${outfitCardToken(session.id)}`, caption: morningOutfitMessage(outfit.items),
       reply_markup: { inline_keyboard: [[
         { text: 'Надену сегодня', callback_data: `w:wear:${session.id}` },
         { text: 'Другой образ', callback_data: `w:next:${session.id}` },
