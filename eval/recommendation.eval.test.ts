@@ -24,7 +24,7 @@ describe('recommendation constraint evaluation', () => {
     {
       name: 'cold weather adds outerwear',
       wardrobe: [item('top', 'Верх', 'Повседневный', 4), item('bottom', 'Низ', 'Повседневный', 4), item('coat', 'Верхняя одежда', 'Повседневный', 5)],
-      request: { occasion: 'Обычная прогулка' as const, weather: 'Холодно' as const, style: 'Повседневный' },
+      request: { occasion: 'Прогулка' as const, weather: 'Холодно' as const, style: 'Повседневный' },
       valid: (ids: string[]) => ids.includes('coat'),
     },
     {

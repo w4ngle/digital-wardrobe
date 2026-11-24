@@ -1,7 +1,26 @@
 import { Item } from './supabase'
 
-export const OCCASIONS = ['На каждый день', 'Университет', 'Обычная прогулка', 'Прогулка в центре', 'Магазин / ПВЗ', 'Ресторан', 'Свидание', 'В гости', 'Праздник / на выход', 'Деловое выступление', 'Поездка', 'Тренировка', 'Пляж / бассейн', 'Активный отдых'] as const
-export const WEATHER = ['Тепло', 'Прохладно', 'Холодно'] as const
+export const OCCASIONS = ['На каждый день', 'Университет', 'Прогулка', 'По делам', 'Ресторан / свидание', 'Праздник / на выход', 'Деловое выступление', 'Поездка', 'Тренировка', 'Пляж / бассейн', 'Активный отдых'] as const
+export const OCCASION_DESCRIPTIONS: Record<Occasion, string> = {
+  'На каждый день': 'Спокойный универсальный образ без строгого повода.',
+  Университет: 'Удобно на несколько часов, уместно для занятий и дороги.',
+  Прогулка: 'Для парка, центра или долгой прогулки; важны удобство и погода.',
+  'По делам': 'Магазин, ПВЗ и короткие бытовые выходы — прежде всего практичность.',
+  'Ресторан / свидание': 'Более собранный и красивый образ, но без обязательного дресс-кода.',
+  'Праздник / на выход': 'Нарядный образ для события, вечеринки или особого вечера.',
+  'Деловое выступление': 'Максимально собранно и формально: конференция, доклад, важная встреча.',
+  Поездка: 'Удобный образ в дорогу и для обычного дня в путешествии.',
+  Тренировка: 'Только спортивные вещи или отмеченные как подходящие для тренировки.',
+  'Пляж / бассейн': 'Купальник и уместные пляжные дополнения без тёплых вещей.',
+  'Активный отдых': 'Много движения: удобство и практичность важнее нарядности.',
+}
+export const WEATHER = ['Жарко', 'Тепло', 'Прохладно', 'Холодно'] as const
+export const WEATHER_DESCRIPTIONS: Record<Weather, string> = {
+  Жарко: 'Выше 25° — самые лёгкие и дышащие вещи.',
+  Тепло: 'Примерно 18–25° — без обязательного верхнего слоя.',
+  Прохладно: 'Примерно 7–17° — может понадобиться один дополнительный слой.',
+  Холодно: 'Ниже 7° — обязательна подходящая верхняя одежда.',
+}
 
 export type Occasion = typeof OCCASIONS[number]
 export type Weather = typeof WEATHER[number]
@@ -31,16 +50,13 @@ function learnedPreferences(preferences: OutfitPreferences) {
     : { itemScores: preferences as Record<string, number>, rejectedCombos: [] }
 }
 
-const targetWarmth: Record<Weather, number> = { Тепло: 1, Прохладно: 3, Холодно: 5 }
+const targetWarmth: Record<Weather, number> = { Жарко: 1, Тепло: 2, Прохладно: 3, Холодно: 5 }
 const targetFormality: Record<Occasion, number> = {
   'На каждый день': 2,
   Университет: 3,
-  'Обычная прогулка': 1,
-  'Прогулка в центре': 2,
-  'Магазин / ПВЗ': 1,
-  Ресторан: 4,
-  Свидание: 4,
-  'В гости': 3,
+  Прогулка: 2,
+  'По делам': 1,
+  'Ресторан / свидание': 4,
   'Праздник / на выход': 5,
   'Деловое выступление': 5,
   Поездка: 2,
@@ -113,8 +129,10 @@ function buildReason(request: OutfitRequest, hasOuterwear: boolean) {
 }
 
 function itemIdentity(item: Item) {
-  const photo = item.photo_url?.split('?')[0]
-  return photo || `${item.category}|${item.subcategory}|${item.custom_name || item.description}|${item.color}`.toLowerCase()
+  const name = (item.custom_name || item.description || '').replace(/\s*[·-]\s*вариант\s*\d+$/i, '').trim()
+  return name
+    ? `${item.category}|${item.subcategory || ''}|${name}|${item.color}`.toLowerCase()
+    : item.photo_url?.split('?')[0] || item.id
 }
 
 export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 3, preferences: OutfitPreferences = {}): OutfitRecommendation[] {
@@ -139,12 +157,12 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
   if (shoes.length === 0) shoes.push(null)
 
   const outerwearItems = byCategory('Верхняя одежда').filter((item) => !isTraining || suitableForTraining(item))
-  const outerwear: Array<Item | null> = isBeach || request.weather === 'Тепло'
+  const outerwear: Array<Item | null> = isBeach || request.weather === 'Жарко' || request.weather === 'Тепло'
     ? [null]
     : outerwearItems.length > 0 ? outerwearItems : [null]
   const secondLayers: Array<Item | null> = isBeach
     ? [null, ...byCategory('Верх').filter((item) => item.subcategory === 'Пляжная накидка').slice(0, 2)]
-    : request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой' && (!isTraining || suitableForTraining(item))).slice(0, 2)]
+    : request.weather === 'Жарко' || request.weather === 'Тепло' ? [null] : [null, ...byCategory('Верх').filter((item) => item.layer_role === 'Второй слой' && (!isTraining || suitableForTraining(item))).slice(0, 2)]
   const accessories = byCategory('Аксессуар').filter((item) => !isBeach || ['Очки', 'Головной убор'].includes(item.subcategory || ''))
   const extras: Array<Item | null> = isTraining ? [null] : [null, ...byCategory('Сумка').filter((item) => !isBeach || item.subcategory === 'Пляжная сумка').slice(0, 2), ...accessories.slice(0, 2)]
   const candidates = new Map<string, OutfitRecommendation>()
@@ -162,11 +180,13 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
         for (const layer of outerwear) {
           for (const secondLayer of secondLayers) {
           for (const extra of extras) {
-            if (secondLayer && core.some(isBulkyTop)) continue
+            if (secondLayer && (core.length !== 2 || core[0].layer_role !== 'Базовый слой' || core.some(isBulkyTop))) continue
             const outfit = [...core, shoe, secondLayer, layer, extra].filter((item): item is Item => item !== null)
             if (new Set(outfit.map(itemIdentity)).size !== outfit.length) continue
             if (request.requiredItemId && !outfit.some((item) => item.id === request.requiredItemId)) continue
-            const itemTotal = outfit.reduce((sum, item) => sum + itemScore(item, request, preferences), 0)
+            const scoredItems = outfit.filter((item) => !['Аксессуар', 'Сумка'].includes(item.category))
+            const itemTotal = scoredItems.reduce((sum, item) => sum + itemScore(item, request, preferences), 0) / scoredItems.length * 3
+              + (outfit.length - scoredItems.length) * 0.25
             const colors = core.length > 1 ? colorScore(core[0].color, core[1].color) : 2
             const coldLayerPenalty = request.weather === 'Холодно' && !layer ? -5 : 0
             const rainPenalty = request.rain && !outfit.some((item) => item.rain_safe) ? -5 : 0
@@ -243,6 +263,6 @@ export function buildPackingList(items: Item[], request: OutfitRequest, days: nu
 }
 
 export function recommendOutfit(items: Item[], season: string, style: string) {
-  const weather: Weather = season === 'Зима' ? 'Холодно' : season === 'Лето' ? 'Тепло' : 'Прохладно'
+  const weather: Weather = season === 'Зима' ? 'Холодно' : season === 'Лето' ? 'Жарко' : 'Прохладно'
   return recommendOutfits(items, { occasion: 'На каждый день', weather, style }, 1)[0] ?? null
 }

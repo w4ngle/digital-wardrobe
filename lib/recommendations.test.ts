@@ -27,7 +27,7 @@ describe('recommendOutfits', () => {
       item('top', 'Верх', 'белый', 'Повседневный', 4),
       item('bottom', 'Низ', 'черный', 'Повседневный', 4),
       item('coat', 'Верхняя одежда', 'серый', 'Повседневный', 5),
-    ], { occasion: 'Обычная прогулка', weather: 'Холодно', style: 'Повседневный' })
+    ], { occasion: 'Прогулка', weather: 'Холодно', style: 'Повседневный' })
 
     expect(result.items.map((candidate) => candidate.id)).toContain('coat')
   })
@@ -47,7 +47,7 @@ describe('recommendOutfits', () => {
       item('bottom', 'Низ', 'черный'),
       item('shoes', 'Обувь', 'белый'),
       item('cap', 'Аксессуар', 'зеленый'),
-    ], { occasion: 'Обычная прогулка', weather: 'Тепло', style: 'Повседневный' })
+    ], { occasion: 'Прогулка', weather: 'Тепло', style: 'Повседневный' })
 
     expect(result.items.map((candidate) => candidate.id)).toContain('cap')
   })
@@ -106,6 +106,32 @@ describe('recommendOutfits', () => {
     ], { occasion: 'Праздник / на выход', weather: 'Тепло', style: 'Нарядный' })
 
     expect(result.items.map((candidate) => candidate.id)).toContain('dress')
+  })
+
+  it('keeps dresses competitive and never adds a second top over them', () => {
+    const results = recommendOutfits([
+      { ...item('dress', 'Платье', 'молочный', 'Нарядный', 3), custom_name: 'Молочное платье' },
+      { ...item('shirt', 'Верх', 'голубой', 'Нарядный', 3), layer_role: 'Базовый слой' },
+      item('trousers', 'Низ', 'бежевый', 'Нарядный', 3),
+      { ...item('cardigan', 'Верх', 'молочный', 'Нарядный', 3), layer_role: 'Второй слой' },
+      item('shoes', 'Обувь', 'черный', 'Нарядный', 3),
+      item('coat', 'Верхняя одежда', 'бежевый', 'Нарядный', 4),
+    ], { occasion: 'Ресторан / свидание', weather: 'Прохладно', style: 'Нарядный' }, 3)
+
+    const dressOutfit = results.find((result) => result.items.some((candidate) => candidate.id === 'dress'))
+    expect(dressOutfit).toBeDefined()
+    expect(dressOutfit?.items.some((candidate) => candidate.category === 'Верх')).toBe(false)
+  })
+
+  it('removes visually duplicated demo variants', () => {
+    const [result] = recommendOutfits([
+      { ...item('shirt-1', 'Верх', 'голубой', 'Деловой', 2), custom_name: 'Голубая рубашка', layer_role: 'Базовый слой' },
+      { ...item('shirt-2', 'Верх', 'голубой', 'Деловой', 2), custom_name: 'Голубая рубашка · вариант 8', layer_role: 'Второй слой' },
+      item('trousers', 'Низ', 'бежевый', 'Деловой', 2),
+      item('shoes', 'Обувь', 'коричневый', 'Деловой', 2),
+    ], { occasion: 'Деловое выступление', weather: 'Прохладно', style: 'Деловой' })
+
+    expect(result.items.filter((candidate) => candidate.custom_name?.startsWith('Голубая рубашка'))).toHaveLength(1)
   })
 
   it('does not repeat a rejected combination', () => {
@@ -179,7 +205,7 @@ describe('recommendOutfits', () => {
       { ...item('second-sweater', 'Верх', 'молочный', 'Повседневный', 4), subcategory: 'Свитер', layer_role: 'Второй слой' },
       item('jeans', 'Низ', 'черный', 'Повседневный', 4),
       item('boots', 'Обувь', 'черный', 'Повседневный', 4),
-    ], { occasion: 'Обычная прогулка', weather: 'Холодно', style: 'Повседневный' })
+    ], { occasion: 'Прогулка', weather: 'Холодно', style: 'Повседневный' })
 
     expect(results.every((result) => !result.items.some((candidate) => candidate.id === 'second-sweater'))).toBe(true)
   })

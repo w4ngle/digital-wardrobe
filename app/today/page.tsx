@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { getItems, getOutfits, getWearHistory, markItemWorn, updateItem, updateOutfit } from '@/lib/api'
+import { getItems, getOutfits, getWearHistory, markItemWorn, unmarkItemWorn, updateItem, updateOutfit } from '@/lib/api'
 import { Item, OutfitWithItems, WearRecord } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
-import { Cloud, Sparkle } from '@phosphor-icons/react'
+import { Cloud } from '@phosphor-icons/react'
 import FastImage from '@/components/FastImage'
+import { moscowDate } from '@/lib/date'
+import { recommendOutfits } from '@/lib/recommendations'
 
 type Weather = { temperature: number, apparent: number, code: number }
 
@@ -30,6 +32,8 @@ export default function TodayPage() {
   const [openedFavorite, setOpenedFavorite] = useState<{ type: 'item' | 'outfit', id: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [wearing, setWearing] = useState(false)
+  const [heroWorn, setHeroWorn] = useState<boolean | null>(null)
+  const [notice, setNotice] = useState('')
 
   function openDetails(title: string, detailItems: Item[], favorite?: { type: 'item' | 'outfit', id: string }) {
     setOpenedTitle(title)
@@ -70,7 +74,15 @@ export default function TodayPage() {
   const favoriteOutfits = usableOutfits.filter((outfit) => outfit.is_favorite || outfit.rating === 1)
   const today = new Date().toISOString().slice(0, 10)
   const planned = usableOutfits.filter((outfit) => outfit.planned_for && outfit.planned_for >= today).sort((a, b) => a.planned_for!.localeCompare(b.planned_for!))
-  const heroOutfit = planned[0] || favoriteOutfits[0] || usableOutfits[0]
+  const heroOutfit = useMemo(() => {
+    if (!items.length) return null
+    const weatherType = weather ? weather.temperature >= 26 ? 'Жарко' : weather.temperature >= 18 ? 'Тепло' : weather.temperature <= 5 ? 'Холодно' : 'Прохладно' : 'Прохладно'
+    const recommendation = recommendOutfits(items, {
+      occasion: 'На каждый день', weather: weatherType, style: 'Повседневный',
+      rain: Boolean(weather && weather.code >= 51 && weather.code <= 67),
+    }, 1)[0]
+    return recommendation ? { name: 'Образ по погоде', occasion: 'На каждый день', notes: recommendation.reason, items: recommendation.items } : null
+  }, [items, weather])
   const totalWears = items.reduce((sum, item) => sum + (item.wear_count || 0), 0)
   const mostWorn = [...items].sort((a, b) => (b.wear_count || 0) - (a.wear_count || 0))[0]
   const categoryCount = useMemo(() => items.reduce<Record<string, number>>((result, item) => {
@@ -93,12 +105,18 @@ export default function TodayPage() {
     if (!heroOutfit || wearing) return
     setWearing(true)
     try {
-      const worn = await Promise.all(heroOutfit.items.map((item) => markItemWorn(item.id)))
+      const today = moscowDate()
+      const alreadyWorn = heroWorn ?? heroOutfit.items.every((item) => item.last_worn_at && moscowDate(item.last_worn_at) === today)
+      const worn = await Promise.all(heroOutfit.items.map((item) => alreadyWorn ? unmarkItemWorn(item.id) : markItemWorn(item.id)))
       const byId = new Map(worn.map((item) => [item.id, item]))
       setItems((current) => current.map((item) => byId.get(item.id) || item))
-      alert('Образ отмечен как надетый сегодня')
+      setHeroWorn(!alreadyWorn)
+      setNotice(alreadyWorn ? `Отметка образа «${heroOutfit.name}» отменена` : `Образ «${heroOutfit.name}» отмечен на сегодня`)
+      window.setTimeout(() => setNotice(''), 3000)
     } catch { alert('Не удалось отметить образ') } finally { setWearing(false) }
   }
+
+  const heroIsWorn = heroWorn ?? Boolean(heroOutfit?.items.length && heroOutfit.items.every((item) => item.last_worn_at && moscowDate(item.last_worn_at) === moscowDate()))
 
   async function fetchWeather(latitude: number, longitude: number) {
     try {
@@ -156,37 +174,42 @@ export default function TodayPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
+    <main className="min-h-screen bg-white text-[#222222]">
       <div className="mx-auto max-w-4xl px-4 pb-32 pt-[max(24px,env(safe-area-inset-top))] sm:px-6">
-        <header className="mb-7">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#81786d]">Мой гардероб</p>
-          <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Сегодня</h1>
+        <header className="mb-6 flex items-end justify-between">
+          <div>
+            <p className="mb-1 text-sm text-[#6a6a6a]">{new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.025em]">Доброе утро</h1>
+          </div>
         </header>
 
-        <section className="mb-6 rounded-[28px] bg-[#1f422f] p-5 text-white">
+        <section className="mb-8 rounded-[14px] bg-[#f7f7f7] p-4">
           {weather ? (
             <div className="flex items-center justify-between gap-4">
-              <div><p className="text-sm text-white/70">Сейчас · {weatherLabel(weather.code)}</p><p className="mt-1 text-4xl font-semibold">{weather.temperature}°</p><p className="mt-1 text-xs text-white/60">Ощущается как {weather.apparent}°</p></div>
-              <Link href={`/recommend?weather=${encodeURIComponent(weather.temperature >= 20 ? 'Тепло' : weather.temperature <= 5 ? 'Холодно' : 'Прохладно')}${weather.code >= 51 && weather.code <= 67 ? '&rain=1' : ''}`} className="rounded-full bg-[#fffaf2] px-4 py-3 text-sm font-semibold text-[#1f422f]">Подобрать образ</Link>
+              <div className="flex items-center gap-3"><Cloud size={22} className="text-[#1f422f]" aria-hidden /><div><p className="text-sm font-medium">{weatherLabel(weather.code)} · {weather.temperature}°</p><p className="mt-0.5 text-xs text-[#6a6a6a]">Ощущается как {weather.apparent}°</p></div></div>
+              <Link href={`/recommend?weather=${encodeURIComponent(weather.temperature >= 26 ? 'Жарко' : weather.temperature >= 18 ? 'Тепло' : weather.temperature <= 5 ? 'Холодно' : 'Прохладно')}${weather.code >= 51 && weather.code <= 67 ? '&rain=1' : ''}`} className="text-sm font-semibold text-[#1f422f] underline underline-offset-4">Учесть</Link>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-4"><div className="flex items-start gap-3"><Cloud size={28} className="mt-0.5 shrink-0" aria-hidden /><div><h2 className="font-semibold">Погода рядом</h2><p className="mt-1 text-sm text-white/65">Поможет выбрать одежду по температуре</p></div></div><button onClick={loadWeather} disabled={weatherLoading} className="shrink-0 rounded-full bg-[#fffaf2] px-4 py-3 text-sm font-semibold text-[#1f422f] disabled:opacity-60">{weatherLoading ? 'Загрузка…' : 'Показать'}</button></div>
+            <div className="flex items-center justify-between gap-4"><div className="flex items-center gap-3"><Cloud size={22} className="shrink-0 text-[#1f422f]" aria-hidden /><div><h2 className="text-sm font-medium">Погода рядом</h2><p className="mt-0.5 text-xs text-[#6a6a6a]">Для более точного образа</p></div></div><button onClick={loadWeather} disabled={weatherLoading} className="shrink-0 text-sm font-semibold text-[#1f422f] underline underline-offset-4 disabled:opacity-60">{weatherLoading ? 'Загрузка…' : 'Показать'}</button></div>
           )}
         </section>
 
-        <section className="mb-7 overflow-hidden rounded-[28px] border border-[#dfd4c4] bg-[#fffaf2]">
-          <div className="flex items-end justify-between px-5 pb-4 pt-5">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6f1820]">Подборка</p><h2 className="mt-1 text-3xl font-bold tracking-[-0.03em] text-[#6f1820]">Образ дня</h2></div>
-            <Sparkle size={28} className="text-[#6f1820]" weight="duotone" aria-hidden />
+        <section className="mb-8">
+          <h2 className="mb-4 text-[22px] font-semibold tracking-[-0.02em]">Образ на сегодня</h2>
+          <div className="overflow-hidden rounded-[14px] bg-[#f7f7f7]">
+            {loading ? <div className="h-64 animate-pulse bg-[#e6e1d8]" /> : heroOutfit ? <OutfitCollage items={heroOutfit.items} onExpand={() => openDetails(heroOutfit.name, heroOutfit.items)} /> : <div className="px-5 py-12 text-center text-sm text-[#81786d]">Собери первый образ — и он появится здесь.</div>}
           </div>
-          {loading ? <div className="mx-5 mb-5 h-48 animate-pulse rounded-2xl bg-[#e6e1d8]" /> : heroOutfit ? <OutfitCollage items={heroOutfit.items} /> : <div className="px-5 pb-6 text-sm text-[#81786d]">Собери первый образ — и он появится здесь.</div>}
-          <div className="grid gap-2 p-4 sm:grid-cols-2">{heroOutfit && <button type="button" onClick={wearHeroOutfit} disabled={wearing} className="rounded-full border border-[#1f422f] px-5 py-3.5 text-sm font-semibold text-[#1f422f] disabled:opacity-50">{wearing ? 'Отмечаем…' : 'Надену этот образ'}</button>}<Link href="/recommend" className="block rounded-full bg-[#1f422f] px-5 py-3.5 text-center text-sm font-semibold text-white">Подобрать другой образ</Link></div>
+          {heroOutfit && <div className="py-4"><h3 className="font-semibold">{heroOutfit.name}</h3>{(heroOutfit.occasion || heroOutfit.notes) && <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#6a6a6a]">{heroOutfit.occasion || heroOutfit.notes}</p>}</div>}
+          <div className="grid grid-cols-2 gap-2">
+            {heroOutfit && <button type="button" onClick={wearHeroOutfit} disabled={wearing} aria-pressed={heroIsWorn} className="rounded-lg bg-[#1f422f] px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60">{wearing ? 'Сохраняем…' : heroIsWorn ? 'Надето сегодня' : 'Надену'}</button>}
+            <Link href="/recommend" className="rounded-lg border border-[#222222] px-4 py-3.5 text-center text-sm font-semibold">Другой образ</Link>
+          </div>
         </section>
 
-        <section className="mb-7 grid grid-cols-3 gap-2">
-          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{loading ? '—' : items.length}</p><p className="mt-1 text-[10px] text-[#81786d]">Вещей</p></div>
-          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{loading ? '—' : totalWears}</p><p className="mt-1 text-[10px] text-[#81786d]">Надеваний</p></div>
-          <div className="rounded-2xl bg-[#fffaf2] p-3"><p className="text-2xl font-semibold">{loading ? '—' : favoriteItems.length + favoriteOutfits.length}</p><p className="mt-1 text-[10px] text-[#81786d]">Избранных</p></div>
+        <section className="mb-8 grid grid-cols-3 border-y border-[#dddddd] py-4">
+          <div><p className="text-xl font-semibold">{loading ? '—' : items.length}</p><p className="mt-1 text-xs text-[#81786d]">вещей</p></div>
+          <div className="border-x border-[#dddddd] px-4"><p className="text-xl font-semibold">{loading ? '—' : totalWears}</p><p className="mt-1 text-xs text-[#81786d]">надеваний</p></div>
+          <div className="pl-4"><p className="text-xl font-semibold">{loading ? '—' : favoriteItems.length + favoriteOutfits.length}</p><p className="mt-1 text-xs text-[#81786d]">избранных</p></div>
         </section>
 
         <section className="mb-7">
@@ -220,6 +243,7 @@ export default function TodayPage() {
         </section>
       </div>
       {openedItems && <div className="fixed inset-0 z-50 flex items-end bg-black/45 p-3 sm:items-center sm:justify-center" onClick={() => setOpenedItems(null)}><section className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[28px] bg-[#fffaf2] p-5" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">{openedTitle}</h2><button type="button" onClick={() => setOpenedItems(null)} className="h-10 w-10 rounded-full bg-[#eee9df] text-xl" aria-label="Закрыть">×</button></div><div className="grid grid-cols-2 gap-3">{openedItems.map((item) => <div key={item.id} className="overflow-hidden rounded-2xl bg-white">{item.photo_url && <FastImage src={item.photo_url} alt={item.custom_name || item.category} className="aspect-square w-full object-cover" />}<div className="p-3"><p className="text-sm font-semibold">{item.custom_name || item.description || item.subcategory || item.category}</p><p className="mt-1 text-xs text-[#817b70]">{item.category} · {item.color}</p></div></div>)}</div>{openedFavorite && <button type="button" onClick={removeOpenedFavorite} className="mt-4 w-full rounded-full border border-[#6f1820] px-4 py-3 text-sm font-semibold text-[#6f1820]">Убрать из избранного</button>}</section></div>}
+      {notice && <div role="status" className="fixed inset-x-4 bottom-24 z-50 mx-auto max-w-sm rounded-xl bg-[#1f422f] px-4 py-3 text-center text-sm font-semibold text-white shadow-lg">{notice}</div>}
     </main>
   )
 }

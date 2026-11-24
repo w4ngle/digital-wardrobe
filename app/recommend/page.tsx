@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createOutfit, getItems, getOutfits, updateItem } from '@/lib/api'
 import { Item, OutfitWithItems } from '@/lib/supabase'
-import { OCCASIONS, WEATHER, Occasion, OutfitRecommendation, Weather, recommendOutfits, replaceOutfitItem } from '@/lib/recommendations'
+import { OCCASIONS, OCCASION_DESCRIPTIONS, WEATHER, WEATHER_DESCRIPTIONS, Occasion, OutfitRecommendation, Weather, recommendOutfits, replaceOutfitItem } from '@/lib/recommendations'
 import FastImage from '@/components/FastImage'
 import { STYLES } from '@/lib/taxonomy'
 import { ArrowsClockwise, Lock, LockOpen, ThumbsDown, ThumbsUp } from '@phosphor-icons/react'
@@ -65,7 +65,7 @@ export default function RecommendPage() {
       const requiredNumber = requiredItemId ? items.filter((item) => !item.availability || item.availability === 'available').findIndex((item) => item.id === requiredItemId) + 1 : 0
       const response = await fetch('/api/recommend', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: `${occasion}; стиль: ${style}; транспорт: ${transport}; ${rain ? 'дождь; ' : ''}${requiredNumber ? `обязательно использовать вещь №${requiredNumber}; ` : ''}${rediscover ? 'предпочесть давно не ношенные вещи' : ''}`, weather: { tempC: weather === 'Тепло' ? 24 : weather === 'Прохладно' ? 13 : 2, rain }, request: { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover } }),
+        body: JSON.stringify({ query: `${occasion}; стиль: ${style}; транспорт: ${transport}; ${rain ? 'дождь; ' : ''}${requiredNumber ? `обязательно использовать вещь №${requiredNumber}; ` : ''}${rediscover ? 'предпочесть давно не ношенные вещи' : ''}`, weather: { tempC: weather === 'Жарко' ? 29 : weather === 'Тепло' ? 22 : weather === 'Прохладно' ? 13 : 2, rain }, request: { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover } }),
       })
       if (!response.ok) throw new Error('ai')
       const result = await response.json() as { items: Item[], reasoning: string, source: 'ai' | 'fallback' }
@@ -145,9 +145,9 @@ export default function RecommendPage() {
         </header>
 
         <section className="space-y-5 rounded-[24px] border border-[#dfd4c4] bg-[#fffaf2] p-4 sm:p-6">
-          <div><h2 className="mb-3 text-sm font-semibold">Куда</h2><Choice values={OCCASIONS} value={occasion} onChange={setOccasion} /></div>
-          <div><h2 className="mb-3 text-sm font-semibold">Погода</h2><Choice values={WEATHER} value={weather} onChange={setWeather} /></div>
-          <label className="flex items-center gap-3 rounded-2xl bg-[#f3ede4] p-3 text-sm font-medium"><input type="checkbox" checked={rain} onChange={(event) => setRain(event.target.checked)} className="h-5 w-5" />Ожидается дождь</label>
+          <div><h2 className="mb-3 text-sm font-semibold">Куда</h2><Choice values={OCCASIONS} value={occasion} onChange={setOccasion} /><p className="mt-2 text-xs leading-5 text-[#817b70]">{OCCASION_DESCRIPTIONS[occasion]}</p></div>
+          <div><h2 className="mb-3 text-sm font-semibold">Погода</h2><Choice values={WEATHER} value={weather} onChange={setWeather} /><p className="mt-2 text-xs leading-5 text-[#817b70]">{WEATHER_DESCRIPTIONS[weather]}</p></div>
+          <label className="flex items-center gap-3 rounded-2xl bg-[#f3ede4] p-3 text-sm font-medium"><input type="checkbox" checked={rain} onChange={(event) => setRain(event.target.checked)} className="h-5 w-5" />Дождь или мокрый снег</label>
           <div><h2 className="mb-3 text-sm font-semibold">Как добираемся</h2><Choice values={['Пешком', 'Автобус', 'Такси'] as const} value={transport} onChange={setTransport} /></div>
           <div><h2 className="mb-3 text-sm font-semibold">Настроение</h2><Choice values={STYLES} value={style} onChange={setStyle} /></div>
           <label className="block text-sm font-semibold">Собрать с конкретной вещью<select value={requiredItemId} onChange={(event) => setRequiredItemId(event.target.value)} className="mt-2 w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-3 font-normal"><option value="">Не важно</option>{items.filter((item) => !item.availability || item.availability === 'available').map((item) => <option key={item.id} value={item.id}>{item.custom_name || item.description || `${item.subcategory || item.category} · ${item.color}`}</option>)}</select></label>

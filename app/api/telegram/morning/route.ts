@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   try {
     const forecast = await fetch('https://api.open-meteo.com/v1/forecast?latitude=47.2357&longitude=39.7015&current=temperature_2m,weather_code&daily=temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=Europe%2FMoscow').then((response) => response.json())
     const temperature = forecast.current.temperature_2m
-    weather = temperature >= 20 ? 'Тепло' : temperature <= 5 ? 'Холодно' : 'Прохладно'
+    weather = temperature >= 26 ? 'Жарко' : temperature >= 18 ? 'Тепло' : temperature <= 5 ? 'Холодно' : 'Прохладно'
     rain = forecast.current.weather_code >= 51 || forecast.daily.precipitation_probability_max[0] >= 50
   } catch { /* use seasonal-neutral fallback */ }
   const preferences = (rated || []).reduce<{ itemScores: Record<string, number>, rejectedCombos: string[][] }>((value, saved) => {
@@ -66,5 +66,14 @@ export async function GET(request: Request) {
       ], [{ text: 'Не моё', callback_data: `w:nope:${session.id}` }, { text: 'Открыть приложение', web_app: { url: recommendUrl } }]] },
     }),
   })
-  return fallback.ok ? Response.json({ ok: true, widget: false }) : new Response('Telegram API error', { status: 502 })
+  if (fallback.ok) return Response.json({ ok: true, widget: false })
+
+  const textFallback = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      chat_id: chatId,
+      text: morningOutfitMessage(outfit.items),
+      reply_markup: { inline_keyboard: [[{ text: 'Открыть образ', web_app: { url: recommendUrl } }]] },
+    }),
+  })
+  return textFallback.ok ? Response.json({ ok: true, widget: false, text: true }) : new Response('Telegram API error', { status: 502 })
 }

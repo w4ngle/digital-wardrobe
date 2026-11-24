@@ -28,6 +28,9 @@ function checkRequiredCategories(items: CatalogItem[], occasion?: string): Valid
   }
 
   const hasOnePiece = categories.includes('Платье') || categories.includes('Комплект')
+  if (hasOnePiece && categories.includes('Верх')) {
+    errors.push({ code: 'top_over_one_piece', message: 'Не добавляй обычный верх поверх платья или цельного комплекта' })
+  }
   if (!categories.includes('Верх') && !hasOnePiece) {
     errors.push({
       code: 'missing_top',
