@@ -46,6 +46,10 @@ export function markItemWorn(id: string) {
   return api<Item>(`/api/items/${id}/wear`, { method: 'POST' })
 }
 
+export function unmarkItemWorn(id: string) {
+  return api<Item>(`/api/items/${id}/wear`, { method: 'DELETE' })
+}
+
 export function getOutfits() {
   return api<OutfitWithItems[]>('/api/outfits')
 }
