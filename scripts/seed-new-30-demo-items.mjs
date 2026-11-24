@@ -38,12 +38,16 @@ const items = [
 
 let added = 0
 for (const [slug, custom_name, category, subcategory, color, season, style, warmth, formality, layer_role] of items) {
-  const { data: existing, error: lookupError } = await supabase.from('items').select('id').eq('custom_name', custom_name).maybeSingle()
-  if (lookupError) throw lookupError
-  if (existing) continue
-  const path = `demo-extra/generated-${slug}.png`
+  const path = `demo-extra/generated-v2-${slug}.png`
   const upload = await supabase.storage.from('wardrobe-items').upload(path, await readFile(`public/demo-items/generated-${slug}.png`), { contentType: 'image/png', upsert: true })
   if (upload.error) throw upload.error
+  const { data: existing, error: lookupError } = await supabase.from('items').select('id').eq('custom_name', custom_name).maybeSingle()
+  if (lookupError) throw lookupError
+  if (existing) {
+    const { error } = await supabase.from('items').update({ photo_url: path }).eq('id', existing.id)
+    if (error) throw error
+    continue
+  }
   const { error } = await supabase.from('items').insert({
     photo_url: path, custom_name, description: custom_name, category, subcategory, color, season, style, warmth, formality, layer_role,
     comfort: style === 'Спортивный' || style === 'Повседневный' ? 5 : 4, confidence: 4, availability: 'available',
