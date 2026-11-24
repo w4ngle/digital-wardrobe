@@ -1,7 +1,7 @@
 import { Item } from '@/lib/supabase'
 import FastImage from '@/components/FastImage'
 
-export default function OutfitCollage({ items }: { items: Item[] }) {
+export default function OutfitCollage({ items, onExpand }: { items: Item[], onExpand?: () => void }) {
   const visible = items.slice(0, 4)
 
   return (
@@ -13,8 +13,9 @@ export default function OutfitCollage({ items }: { items: Item[] }) {
           ) : (
             <div className="flex h-full items-center justify-center px-2 text-center text-xs text-[#8c867b]">{item.category}</div>
           )}
-          {index === 3 && items.length > 4 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#26372f]/65 text-xl font-semibold text-white">+{items.length - 4}</div>
+          {index === 3 && items.length > 4 && (onExpand
+            ? <button type="button" onClick={(event) => { event.stopPropagation(); onExpand() }} className="absolute inset-0 flex items-center justify-center bg-[#26372f]/65 text-xl font-semibold text-white" aria-label={`Показать ещё ${items.length - 4} вещей`}>+{items.length - 4}</button>
+            : <div className="absolute inset-0 flex items-center justify-center bg-[#26372f]/65 text-xl font-semibold text-white">+{items.length - 4}</div>
           )}
         </div>
       ))}
