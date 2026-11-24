@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Item } from '@/lib/supabase'
 import { CoatHanger, Heart, PencilSimple, X } from '@phosphor-icons/react'
 import FastImage from '@/components/FastImage'
+import { moscowDate } from '@/lib/date'
 
 type ItemCardProps = {
   item: Item
@@ -20,6 +21,7 @@ const availabilityLabels = { available: 'Доступна', laundry: 'В сти�
 
 export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, onAvailability, onSnooze, onUnavailableReason }: ItemCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const wornToday = Boolean(item.last_worn_at && moscowDate(item.last_worn_at) === moscowDate())
   const handleDelete = async () => {
     if (!confirm('Удалить эту вещь?')) return
     try {
@@ -43,8 +45,15 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
           <div className="flex h-full items-center justify-center text-[#9d9488]"><CoatHanger size={34} aria-label="Нет фото" /></div>
         )}
 
-        <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-8rem)] rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold leading-tight text-[#4d4941] shadow-sm backdrop-blur">
-          {item.ai_meta?.demo === true ? 'Демо · ' : ''}{item.subcategory || item.category}
+        <span className="absolute left-2.5 right-14 top-2.5 flex min-w-0 items-center gap-1.5">
+          {item.ai_meta?.demo === true && (
+            <span className="shrink-0 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold leading-none text-[#6f1820] shadow-sm backdrop-blur">
+              Демо
+            </span>
+          )}
+          <span className="min-w-0 truncate rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold leading-none text-[#4d4941] shadow-sm backdrop-blur">
+            {item.subcategory || item.category}
+          </span>
         </span>
 
       </button>
@@ -68,14 +77,14 @@ export default function ItemCard({ item, onDelete, onEdit, onFavorite, onWear, o
           <span className="rounded-full bg-[#f3e4dd] px-2 py-1 text-[10px] text-[#6f1820]">{availabilityLabels[item.availability || 'available']}</span>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => onWear(item)} className="min-w-0 truncate rounded-xl bg-[#1f422f] px-1 py-2.5 text-[11px] font-semibold text-white active:scale-[0.98]">Надела</button>
+          <button type="button" onClick={() => onWear(item)} aria-pressed={wornToday} className="min-w-0 truncate rounded-xl bg-[#1f422f] px-1 py-2.5 text-[11px] font-semibold text-white active:scale-[0.98]">{wornToday ? 'Надето сегодня' : 'Надела'}</button>
           <button type="button" onClick={() => setDetailsOpen(true)} className="min-w-0 truncate rounded-xl bg-[#eee9df] px-1 py-2.5 text-[11px] font-medium text-[#52635a] active:scale-[0.98]">Подробнее</button>
         </div>
       </div>
 
       {detailsOpen && <div className="fixed inset-0 z-50 flex items-end bg-black/45 p-3 sm:items-center sm:justify-center" onClick={() => setDetailsOpen(false)}><section className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-[28px] bg-[#fffaf2] p-5 text-[#2d2a25]" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-start justify-between gap-3"><div><p className="text-xs text-[#817b70]">{item.subcategory || item.category}</p><h2 className="mt-1 text-xl font-bold">{item.custom_name || item.description || `${item.color}, ${(item.subcategory || item.category).toLowerCase()}`}</h2></div><button type="button" onClick={() => setDetailsOpen(false)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eee9df]" aria-label="Закрыть"><X size={18} /></button></div><div className="mb-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => { setDetailsOpen(false); onEdit(item) }} className="flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#1f422f] text-sm font-semibold"><PencilSimple size={17} />Изменить</button><button type="button" onClick={handleDelete} className="min-h-11 rounded-full border border-[#8c4a43] text-sm font-semibold text-[#8c4a43]">Удалить</button></div>
-        <button onClick={() => onWear(item)} className="mt-3 w-full rounded-xl bg-[#eee9df] px-2 py-3 text-xs font-medium text-[#52635a] active:scale-[0.98]">
-          Надела сегодня{item.wears_since_wash ? ` · после стирки ${item.wears_since_wash}` : ''}
+        <button onClick={() => onWear(item)} aria-pressed={wornToday} className="mt-3 w-full rounded-xl bg-[#eee9df] px-2 py-3 text-xs font-medium text-[#52635a] active:scale-[0.98]">
+          {wornToday ? 'Надето сегодня' : 'Надела сегодня'}{item.wears_since_wash ? ` · после стирки ${item.wears_since_wash}` : ''}
         </button>
         {Boolean(item.wear_count) && <p className="mt-1 text-center text-[10px] text-[#817b70]">Всего надеваний: {item.wear_count}</p>}
         {(item.wears_since_wash || 0) >= (item.category === 'Верхняя одежда' ? 5 : item.subcategory === 'Джинсы' ? 4 : item.layer_role === 'Второй слой' ? 2 : 1) && <p className="mt-2 rounded-lg bg-[#f3e4dd] px-2 py-1.5 text-[10px] text-[#6f1820]">Пора решить: в стирку или надеть ещё раз</p>}
