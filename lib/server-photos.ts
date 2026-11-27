@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { Item } from './supabase'
 import { getSupabaseAdmin } from './supabase-admin'
 import { localDemoPhoto } from './demo-items'
@@ -19,7 +21,12 @@ export function photoPath(value: string | null) {
 
 export async function signItemPhotos<T extends Item>(items: T[]) {
   const storage = getSupabaseAdmin().storage.from('wardrobe-items')
-  const localUrls = items.map(localDemoPhoto)
+  const localUrls = items.map((item) => {
+    const url = localDemoPhoto(item)
+    if (!url) return null
+    const filename = url.split('?')[0].replace('/demo-items/', '')
+    return existsSync(join(process.cwd(), 'public', 'demo-items', filename)) ? url : null
+  })
   const paths = items.map((item, index) => localUrls[index] ? null : photoPath(item.photo_url))
   const uniquePaths = [...new Set(paths.filter((path): path is string => Boolean(path)))]
   if (!uniquePaths.length) return items.map((item, index) => ({ ...item, photo_url: localUrls[index] }))

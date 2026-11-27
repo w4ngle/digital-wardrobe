@@ -17,9 +17,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { data } = await admin.from('items').select('*').in('id', session.item_ids)
   const items = (await signItemPhotos((data || []) as Item[])).map((item) => ({
     ...item,
-    photo_url: item.photo_url?.startsWith('/')
-      ? new URL(item.photo_url.replace(/\.webp(?=\?)/, '.png'), request.url).href
-      : item.photo_url,
+    photo_url: item.photo_url?.startsWith('/') ? new URL(item.photo_url, request.url).href : item.photo_url,
   }))
 
   return new ImageResponse(
