@@ -1,5 +1,7 @@
 'use client'
 
+import { CATEGORIES, SEASONS, STYLES } from '@/lib/taxonomy'
+
 type ItemFiltersProps = {
   category: string
   season: string
@@ -9,10 +11,6 @@ type ItemFiltersProps = {
   onStyleChange: (value: string) => void
   onReset: () => void
 }
-
-const categories = ['Верх', 'Низ', 'Обувь', 'Верхняя одежда', 'Аксессуар']
-const seasons = ['Лето', 'Зима', 'Демисезон', 'Всесезонное']
-const styles = ['Повседневный', 'Деловой', 'Спортивный', 'Нарядный']
 
 export default function ItemFilters({
   category,
@@ -40,7 +38,7 @@ export default function ItemFilters({
       </div>
 
       <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
-        {['', ...categories].map((cat) => (
+        {['', ...CATEGORIES].map((cat) => (
           <button
             key={cat || 'all'}
             onClick={() => onCategoryChange(cat)}
@@ -62,7 +60,7 @@ export default function ItemFilters({
             className="w-full appearance-none rounded-xl border border-[#ddd7cc] bg-[#faf8f4] px-3 py-2.5 text-xs text-[#5e594f]"
           >
             <option value="">Любой сезон</option>
-            {seasons.map((s) => (
+            {SEASONS.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -78,7 +76,7 @@ export default function ItemFilters({
             className="w-full appearance-none rounded-xl border border-[#ddd7cc] bg-[#faf8f4] px-3 py-2.5 text-xs text-[#5e594f]"
           >
             <option value="">Любой стиль</option>
-            {styles.map((st) => (
+            {STYLES.map((st) => (
               <option key={st} value={st}>
                 {st}
               </option>

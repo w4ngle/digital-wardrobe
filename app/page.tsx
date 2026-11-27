@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getItems, createItem, deleteItem, updateItem, markItemWorn, clearDemoItems } from '@/lib/api'
+import { useState, useEffect, useRef } from 'react'
+import { getItems, createItem, deleteItem, updateItem, markItemWorn, unmarkItemWorn, clearDemoItems } from '@/lib/api'
 import { Item } from '@/lib/supabase'
 import ItemCard from '@/components/ItemCard'
 import ItemForm from '@/components/ItemForm'
 import ItemFilters from '@/components/ItemFilters'
 import EditItemModal from '@/components/EditItemModal'
 import { Plus } from '@phosphor-icons/react'
+import { moscowDate } from '@/lib/date'
 
 export default function Home() {
   const [items, setItems] = useState<Item[]>([])
@@ -18,6 +19,9 @@ export default function Home() {
   const [filterStyle, setFilterStyle] = useState('')
   const [editingItem, setEditingItem] = useState<Item | null>(null)
   const [visibleCount, setVisibleCount] = useState(30)
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const [notice, setNotice] = useState('')
+  const loadMoreRef = useRef<HTMLDivElement>(null)
   const demoItems = items.filter((item) => item.ai_meta?.demo === true)
 
   useEffect(() => {
@@ -79,8 +83,11 @@ export default function Home() {
   }
 
   const handleWear = async (item: Item) => {
-    const updated = await markItemWorn(item.id)
+    const wornToday = Boolean(item.last_worn_at && moscowDate(item.last_worn_at) === moscowDate())
+    const updated = wornToday ? await unmarkItemWorn(item.id) : await markItemWorn(item.id)
     setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
+    setNotice(wornToday ? 'Отметка «Надето сегодня» отменена' : 'Отмечено: надето сегодня')
+    window.setTimeout(() => setNotice(''), 2500)
   }
 
   const handleAvailability = async (item: Item, availability: NonNullable<Item['availability']>) => {
@@ -116,9 +123,20 @@ export default function Home() {
     if (filterCategory && item.category !== filterCategory) return false
     if (filterSeason && item.season !== filterSeason) return false
     if (filterStyle && item.style !== filterStyle) return false
+    if (favoritesOnly && !item.is_favorite) return false
     return true
-  })
+  }).filter((item, index, all) => all.findIndex((candidate) => (candidate.photo_url?.split('?')[0] || candidate.id) === (item.photo_url?.split('?')[0] || item.id)) === index)
   const visibleItems = filteredItems.slice(0, visibleCount)
+
+  useEffect(() => {
+    const target = loadMoreRef.current
+    if (!target || visibleCount >= filteredItems.length) return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setVisibleCount((count) => Math.min(count + 30, filteredItems.length))
+    }, { rootMargin: '300px' })
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [filteredItems.length, visibleCount])
 
   return (
     <main className="min-h-screen bg-[#f6f0e6] text-[#1e3026]">
@@ -157,6 +175,8 @@ export default function Home() {
         )}
 
         {!loading && demoItems.length > 0 && <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl bg-[#e5ece7] px-4 py-3 text-xs text-[#52635a]"><span>Демо-гардероб: {demoItems.length} вещей для знакомства с приложением</span><button type="button" onClick={handleClearDemo} className="shrink-0 font-semibold underline">Очистить</button></div>}
+
+        <button type="button" onClick={() => { setFavoritesOnly((value) => !value); setVisibleCount(30) }} aria-pressed={favoritesOnly} className={`mb-4 rounded-full px-4 py-2 text-xs font-semibold ${favoritesOnly ? 'bg-[#1f422f] text-white' : 'border border-[#ddd7cc] bg-[#faf8f4]'}`}>♡ Избранное</button>
 
         <ItemFilters
           category={filterCategory}
@@ -202,7 +222,7 @@ export default function Home() {
           </div>
         )}
 
-        {!loading && visibleCount < filteredItems.length && <button type="button" onClick={() => setVisibleCount((count) => count + 30)} className="mx-auto mt-8 block rounded-full border border-[#1f422f] px-6 py-3 text-sm font-semibold text-[#1f422f]">Показать ещё</button>}
+        {!loading && visibleCount < filteredItems.length && <div ref={loadMoreRef} className="h-10" aria-label="Загружаем ещё вещи" />}
 
         {!loading && items.length > 0 && (
           <p className="mt-10 text-center text-xs text-[#9b958a]">
@@ -218,6 +238,7 @@ export default function Home() {
           onClose={() => setEditingItem(null)}
         />
       )}
+      {notice && <div role="status" className="fixed inset-x-4 bottom-24 z-50 mx-auto max-w-sm rounded-xl bg-[#1f422f] px-4 py-3 text-center text-sm font-semibold text-white shadow-lg">{notice}</div>}
     </main>
   )
 }

@@ -1,5 +1,6 @@
 import { appUrl, morningOutfitMessage, recommendUrl } from '@/lib/bot-messages'
-import { recommendOutfits, Weather } from '@/lib/recommendations'
+import { pickDailyOutfit, recommendOutfits, Weather } from '@/lib/recommendations'
+import { uniqueDemoItems } from '@/lib/demo-items'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isCronRequest } from '@/lib/cron-auth'
 import { outfitWidgetHtml, outfitWidgetState } from '@/lib/telegram-widget'
@@ -13,9 +14,10 @@ export async function GET(request: Request) {
   if (!token || !chatId) return new Response('Telegram is not configured', { status: 500 })
 
   const admin = getSupabaseAdmin()
-  const [{ data: items, error }, { data: rated }] = await Promise.all([
+  const [{ data: items, error }, { data: rated }, { data: recentSessions }] = await Promise.all([
     admin.from('items').select('*'),
     admin.from('outfits').select('rating, outfit_items(item_id)').not('rating', 'is', null),
+    admin.from('telegram_widget_sessions').select('item_ids').order('created_at', { ascending: false }).limit(7),
   ])
   if (error) return new Response(error.message, { status: 500 })
 
@@ -33,7 +35,8 @@ export async function GET(request: Request) {
     if (saved.rating === -1) value.rejectedCombos.push(ids)
     return value
   }, { itemScores: {}, rejectedCombos: [] })
-  const outfit = recommendOutfits(items || [], { occasion: 'На каждый день', weather, style: 'Повседневный', rain }, 1, preferences)[0] ?? null
+  const candidates = recommendOutfits(uniqueDemoItems(items || []), { occasion: 'На каждый день', weather, style: 'Повседневный', rain }, 12, preferences)
+  const outfit = pickDailyOutfit(candidates, (recentSessions || []).map((session) => session.item_ids || []))
   if (!outfit) return Response.json({ ok: true, skipped: 'not enough items' })
 
   const requestData = { occasion: 'На каждый день' as const, weather, style: 'Повседневный', rain }

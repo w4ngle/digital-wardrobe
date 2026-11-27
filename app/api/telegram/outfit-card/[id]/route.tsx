@@ -15,7 +15,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { data: session } = await admin.from('telegram_widget_sessions').select('item_ids').eq('id', id).single()
   if (!session) return new Response('Not found', { status: 404 })
   const { data } = await admin.from('items').select('*').in('id', session.item_ids)
-  const items = await signItemPhotos((data || []) as Item[])
+  const items = (await signItemPhotos((data || []) as Item[])).map((item) => ({
+    ...item,
+    photo_url: item.photo_url?.startsWith('/')
+      ? new URL(item.photo_url.replace(/\.webp(?=\?)/, '.png'), request.url).href
+      : item.photo_url,
+  }))
 
   return new ImageResponse(
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: 54, background: '#f4efe5', color: '#193328', fontFamily: 'sans-serif' }}>

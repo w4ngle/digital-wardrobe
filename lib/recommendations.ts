@@ -129,6 +129,8 @@ function buildReason(request: OutfitRequest, hasOuterwear: boolean) {
 }
 
 function itemIdentity(item: Item) {
+  const photo = item.photo_url?.split('?')[0]
+  if (photo) return `photo:${photo}`.toLowerCase()
   const name = (item.custom_name || item.description || '').replace(/\s*[·-]\s*вариант\s*\d+$/i, '').trim()
   return name
     ? `${item.category}|${item.subcategory || ''}|${name}|${item.color}`.toLowerCase()
@@ -232,16 +234,32 @@ export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 
 
   const varied: OutfitRecommendation[] = []
   for (const candidate of unique) {
-    const core = candidate.items.filter((item) => !['Аксессуар', 'Сумка'].includes(item.category))
+    const base = candidate.items.filter((item) => ['Верх', 'Низ', 'Платье', 'Комплект', 'Купальник'].includes(item.category))
     const isTooSimilar = varied.some((selected) => {
-      const selectedIds = new Set(selected.items.filter((item) => !['Аксессуар', 'Сумка'].includes(item.category)).map((item) => item.id))
-      return core.filter((item) => selectedIds.has(item.id)).length >= Math.max(2, core.length - 1)
+      const selectedBase = selected.items.filter((item) => ['Верх', 'Низ', 'Платье', 'Комплект', 'Купальник'].includes(item.category))
+      const selectedIds = new Set(selectedBase.map((item) => item.id))
+      return base.length > 0 && base.length === selectedBase.length && base.every((item) => selectedIds.has(item.id))
     })
     if (!isTooSimilar || varied.length === 0) varied.push(candidate)
     if (varied.length === limit) return varied
   }
 
   return [...varied, ...unique.filter((candidate) => !varied.includes(candidate))].slice(0, limit)
+}
+
+function outfitKey(items: Item[]) {
+  return items.map((item) => item.id).sort().join(':')
+}
+
+export function pickDailyOutfit(candidates: OutfitRecommendation[], recentItemIds: string[][], date = new Date()) {
+  if (candidates.length === 0) return null
+  const recentKeys = new Set(recentItemIds.map((ids) => [...ids].sort().join(':')))
+  const fresh = candidates.filter((candidate) => !recentKeys.has(outfitKey(candidate.items)))
+  const previousKey = recentItemIds[0] ? [...recentItemIds[0]].sort().join(':') : null
+  const changed = candidates.filter((candidate) => outfitKey(candidate.items) !== previousKey)
+  const pool = fresh.length > 0 ? fresh : changed.length > 0 ? changed : candidates
+  const day = Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86400000)
+  return pool[Math.abs(day) % pool.length]
 }
 
 export function replaceOutfitItem(items: Item[], result: OutfitRecommendation, itemId: string, request: OutfitRequest, preferences: OutfitPreferences = {}) {

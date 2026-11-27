@@ -15,7 +15,16 @@ export async function GET(request: Request) {
   const items = (wornItems || []).filter((item) => item.category === 'Верхняя одежда'
     ? (item.wears_since_wash || 0) >= 5
     : item.layer_role === 'Второй слой' ? (item.wears_since_wash || 0) >= 2 : true)
-  if (!items.length) return Response.json({ ok: true, skipped: 'nothing needs washing' })
+  if (!items.length) {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        chat_id: chatId,
+        text: 'На сегодня всё 🤍 Вещей для стирки не отмечено.',
+        reply_markup: { inline_keyboard: [[{ text: 'Открыть гардероб', web_app: { url: todayUrl } }]] },
+      }),
+    })
+    return response.ok ? Response.json({ ok: true, empty: true }) : new Response('Telegram API error', { status: 502 })
+  }
 
   const list = items.map((item) => `• ${item.custom_name || item.description || item.subcategory || item.category}`).join('\n')
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

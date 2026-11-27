@@ -4,6 +4,7 @@ import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES } fro
 import { hasValidSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { photoPath, signItemPhotos } from '@/lib/server-photos'
+import { uniqueDemoItems } from '@/lib/demo-items'
 
 const ItemInput = z.object({
   photo_url: z.string().nullable(),
@@ -38,7 +39,7 @@ export async function GET() {
     .order('created_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json(await signItemPhotos(data || []))
+  return NextResponse.json(await signItemPhotos(uniqueDemoItems(data || [])))
 }
 
 export async function POST(request: NextRequest) {

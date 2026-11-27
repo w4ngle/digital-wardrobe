@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Item } from './supabase'
-import { buildPackingList, recommendOutfits, replaceOutfitItem } from './recommendations'
+import { buildPackingList, pickDailyOutfit, recommendOutfits, replaceOutfitItem } from './recommendations'
 
 const item = (id: string, category: string, color: string, style = 'Повседневный', warmth = 3): Item => ({
   id, category, color, style, warmth,
@@ -64,6 +64,19 @@ describe('recommendOutfits', () => {
 
     expect(results).toHaveLength(3)
     expect(new Set(results.flatMap((result) => result.items.map((candidate) => candidate.id))).size).toBeGreaterThan(3)
+    const baseKeys = results.map((result) => result.items
+      .filter((candidate) => ['Верх', 'Низ', 'Платье', 'Комплект'].includes(candidate.category))
+      .map((candidate) => candidate.id).sort().join(':'))
+    expect(new Set(baseKeys).size).toBe(results.length)
+  })
+
+  it('rotates the morning outfit away from recently sent combinations', () => {
+    const candidates = [
+      { items: [item('top-1', 'Верх', 'белый'), item('bottom-1', 'Низ', 'черный')], reason: '', score: 10 },
+      { items: [item('top-2', 'Верх', 'серый'), item('bottom-2', 'Низ', 'синий')], reason: '', score: 9 },
+    ]
+    const picked = pickDailyOutfit(candidates, [['top-1', 'bottom-1']], new Date('2026-11-27T08:00:00Z'))
+    expect(picked?.items.map((candidate) => candidate.id).sort()).toEqual(['bottom-2', 'top-2'])
   })
 
   it('excludes unavailable items and learns from ratings', () => {

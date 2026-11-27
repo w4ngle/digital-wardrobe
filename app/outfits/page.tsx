@@ -6,6 +6,7 @@ import { Item, OutfitWithItems } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
 import { Heart, PencilSimple, X } from '@phosphor-icons/react'
 import FastImage from '@/components/FastImage'
+import { CATEGORIES, SEASONS, STYLES } from '@/lib/taxonomy'
 
 export default function OutfitsPage() {
   const [outfits, setOutfits] = useState<OutfitWithItems[]>([])
@@ -21,10 +22,18 @@ export default function OutfitsPage() {
   const [authorName, setAuthorName] = useState('')
   const [partnerMessage, setPartnerMessage] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [openedOutfit, setOpenedOutfit] = useState<OutfitWithItems | null>(null)
+  const [itemQuery, setItemQuery] = useState('')
+  const [itemCategory, setItemCategory] = useState('')
+  const [itemSeason, setItemSeason] = useState('')
+  const [itemStyle, setItemStyle] = useState('')
 
   async function loadData() {
     const [outfitsData, itemsData] = await Promise.all([getOutfits(), getItems()])
-    setOutfits(outfitsData)
+    const today = new Date().toISOString().slice(0, 10)
+    const normalized = outfitsData.map((outfit) => outfit.planned_for && outfit.planned_for < today ? { ...outfit, planned_for: null } : outfit)
+    setOutfits(normalized)
+    await Promise.all(outfitsData.filter((outfit) => outfit.planned_for && outfit.planned_for < today).map((outfit) => updateOutfit(outfit.id, { planned_for: null })))
     setAllItems(itemsData)
   }
 
@@ -32,7 +41,9 @@ export default function OutfitsPage() {
     fetch('/api/auth/telegram').then((response) => response.json()).then((session) => setRole(session.role || 'owner')).catch(() => undefined)
     Promise.all([getOutfits(), getItems()])
       .then(([outfitsData, itemsData]) => {
-        setOutfits(outfitsData)
+        const today = new Date().toISOString().slice(0, 10)
+        setOutfits(outfitsData.map((outfit) => outfit.planned_for && outfit.planned_for < today ? { ...outfit, planned_for: null } : outfit))
+        void Promise.all(outfitsData.filter((outfit) => outfit.planned_for && outfit.planned_for < today).map((outfit) => updateOutfit(outfit.id, { planned_for: null })))
         setAllItems(itemsData)
       })
       .catch(() => alert('Не удалось загрузить образы'))
@@ -41,6 +52,20 @@ export default function OutfitsPage() {
 
   const selectedItems = allItems.filter((item) => selectedItemIds.includes(item.id))
   const visibleOutfits = outfits.filter((outfit) => outfit.rating !== -1)
+  const selectableItems = allItems.filter((item) => {
+    if (item.availability && item.availability !== 'available') return false
+    if (itemCategory && item.category !== itemCategory) return false
+    if (itemSeason && item.season !== itemSeason) return false
+    if (itemStyle && item.style !== itemStyle) return false
+    const query = itemQuery.trim().toLowerCase()
+    return !query || `${item.custom_name || ''} ${item.description || ''} ${item.subcategory || ''} ${item.category}`.toLowerCase().includes(query)
+  })
+  const formDirty = Boolean(editingId && (name || occasion || notes || selectedItemIds.length))
+
+  function closeForm() {
+    if (formDirty && !confirm('Закрыть без сохранения изменений?')) return
+    setShowForm(false); setEditingId(null); setSelectedItemIds([]); setName(''); setOccasion(''); setNotes('')
+  }
 
   function toggleItem(id: string) {
     const item = allItems.find((candidate) => candidate.id === id)
@@ -109,13 +134,14 @@ export default function OutfitsPage() {
             <h1 className="text-4xl font-bold leading-none tracking-[-0.04em]">Образы</h1>
             <p className="mt-2 text-sm text-[#817b70]">{loading ? 'Загружаем…' : `${visibleOutfits.length} сохранено`}</p>
           </div>
-          <button onClick={() => { setShowForm((current) => !current); setEditingId(null) }} className="rounded-full bg-[#1f422f] px-4 py-3 text-sm font-medium text-white shadow-sm active:scale-95">
+          <button onClick={() => showForm ? closeForm() : setShowForm(true)} className="rounded-full bg-[#1f422f] px-4 py-3 text-sm font-medium text-white shadow-sm active:scale-95">
             {showForm ? 'Закрыть' : '+ Собрать'}
           </button>
         </header>
 
         {showForm && (
           <form onSubmit={handleSubmit} className="mb-8 rounded-[24px] bg-[#faf8f4] p-4 shadow-[0_8px_30px_rgba(41,37,31,0.08)] sm:p-6">
+            {editingId && <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-4 flex items-center justify-between border-b border-[#ddd7cc] bg-[#faf8f4]/95 px-4 py-3 backdrop-blur"><button type="button" onClick={closeForm} className="text-sm font-medium">Отмена</button><button type="submit" disabled={saving || selectedItemIds.length < 2} className="rounded-lg bg-[#1f422f] px-4 py-2 text-sm font-semibold text-white disabled:opacity-35">Сохранить</button></div>}
             <div className="mb-5 grid grid-cols-[104px_1fr] gap-4">
               <div className="overflow-hidden rounded-2xl bg-[#ece7de]">
                 {selectedItems.length ? <OutfitCollage items={selectedItems} /> : <div className="flex aspect-square items-center justify-center px-3 text-center text-xs text-[#8c867b]">Выберите вещи</div>}
@@ -130,8 +156,9 @@ export default function OutfitsPage() {
             </div>
 
             <h2 className="mb-3 text-sm font-semibold">Выберите вещи</h2>
+            <div className="mb-3 space-y-2"><input value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} placeholder="Поиск по гардеробу" className="w-full rounded-xl border border-[#ddd7cc] bg-white px-3 py-2.5 text-sm" /><div className="grid grid-cols-3 gap-2"><select value={itemCategory} onChange={(event) => setItemCategory(event.target.value)} className="min-w-0 rounded-xl border border-[#ddd7cc] bg-white px-2 py-2 text-xs"><option value="">Категория</option>{CATEGORIES.map((value) => <option key={value}>{value}</option>)}</select><select value={itemSeason} onChange={(event) => setItemSeason(event.target.value)} className="min-w-0 rounded-xl border border-[#ddd7cc] bg-white px-2 py-2 text-xs"><option value="">Сезон</option>{SEASONS.map((value) => <option key={value}>{value}</option>)}</select><select value={itemStyle} onChange={(event) => setItemStyle(event.target.value)} className="min-w-0 rounded-xl border border-[#ddd7cc] bg-white px-2 py-2 text-xs"><option value="">Стиль</option>{STYLES.map((value) => <option key={value}>{value}</option>)}</select></div></div>
             <div className="grid max-h-[420px] grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-5">
-              {allItems.filter((item) => !item.availability || item.availability === 'available').map((item) => {
+              {selectableItems.map((item) => {
                 const selected = selectedItemIds.includes(item.id)
                 return (
                   <button type="button" key={item.id} onClick={() => toggleItem(item.id)} className={`relative overflow-hidden rounded-2xl border-2 bg-[#ece7de] transition ${selected ? 'border-[#26372f]' : 'border-transparent'}`} aria-pressed={selected}>
@@ -143,9 +170,9 @@ export default function OutfitsPage() {
               })}
             </div>
 
-            <button type="submit" disabled={saving || selectedItemIds.length < 2} className="mt-5 w-full rounded-xl bg-[#26372f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
+            {!editingId && <button type="submit" disabled={saving || selectedItemIds.length < 2} className="mt-5 w-full rounded-xl bg-[#26372f] px-4 py-3.5 font-semibold text-white disabled:opacity-35">
               {saving ? 'Сохраняем…' : selectedItemIds.length < 2 ? 'Выберите минимум 2 вещи' : editingId ? 'Сохранить изменения' : 'Сохранить образ'}
-            </button>
+            </button>}
           </form>
         )}
 
@@ -155,7 +182,7 @@ export default function OutfitsPage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6">
             {visibleOutfits.map((outfit) => (
               <article key={outfit.id} className="overflow-hidden rounded-[24px] bg-[#faf8f4] shadow-[0_8px_24px_rgba(41,37,31,0.06)]">
-                <OutfitCollage items={outfit.items} />
+                <OutfitCollage items={outfit.items} onExpand={() => setOpenedOutfit(outfit)} />
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><h2 className="truncate font-semibold">{outfit.name}</h2><p className="mt-1 truncate text-xs text-[#817b70]">{outfit.suggested_by === 'partner' ? '💌 Предложение от любимого' : outfit.occasion || `${outfit.items.length} вещи`}</p></div>
@@ -169,7 +196,7 @@ export default function OutfitsPage() {
                   {outfit.suggested_by === 'partner' && <div className="mt-3 rounded-xl bg-[#f3ede4] p-3 text-xs"><p className="font-semibold">От {outfit.suggested_by_name || 'любимого'}</p>{outfit.partner_message && <p className="mt-1 text-[#746e64]">{outfit.partner_message}</p>}{role === 'owner' && outfit.proposal_status === 'pending' ? <div className="mt-3 grid grid-cols-3 gap-1"><button onClick={() => handleProposal(outfit, 'accepted')} className="rounded-lg bg-white px-2 py-2">Нравится</button><button onClick={() => handleProposal(outfit, 'will_wear')} className="rounded-lg bg-[#1f422f] px-2 py-2 text-white">Надену</button><button onClick={() => handleProposal(outfit, 'declined')} className="rounded-lg bg-white px-2 py-2">Не сейчас</button></div> : <p className="mt-2 font-medium">{outfit.owner_reaction || (outfit.proposal_status === 'pending' ? 'Ждёт ответа' : '')}</p>}</div>}
                   <label className="mt-3 block text-[10px] font-semibold uppercase tracking-wide text-[#817b70]">
                     Запланировать
-                    <input type="date" value={outfit.planned_for || ''} onChange={(event) => handlePlan(outfit, event.target.value)} className="mt-1 w-full rounded-lg border border-[#ddd7cc] bg-white px-2 py-2 text-xs font-normal normal-case tracking-normal" />
+                    <input type="date" min={new Date().toISOString().slice(0, 10)} value={outfit.planned_for || ''} onChange={(event) => handlePlan(outfit, event.target.value)} className="mt-1 block max-w-full rounded-lg border border-[#ddd7cc] bg-white px-2 py-2 text-xs font-normal normal-case tracking-normal" />
                   </label>
                 </div>
               </article>
@@ -179,6 +206,7 @@ export default function OutfitsPage() {
           <div className="rounded-[24px] border border-[#ded8cd] bg-[#faf8f4] px-6 py-14 text-center text-sm text-[#817b70]">Соберите первый образ из вещей гардероба</div>
         )}
       </div>
+      {openedOutfit && <div className="fixed inset-0 z-50 flex items-end bg-black/45 p-3 sm:items-center sm:justify-center" onClick={() => setOpenedOutfit(null)}><section className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[28px] bg-[#fffaf2] p-5" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between gap-3"><h2 className="truncate text-xl font-bold">{openedOutfit.name}</h2><button type="button" onClick={() => setOpenedOutfit(null)} className="h-10 w-10 shrink-0 rounded-full bg-[#eee9df] text-xl" aria-label="Закрыть">×</button></div><div className="grid grid-cols-2 gap-3">{openedOutfit.items.map((item) => <div key={item.id} className="overflow-hidden rounded-2xl bg-white">{item.photo_url && <FastImage src={item.photo_url} alt={item.custom_name || item.category} className="aspect-square w-full object-cover" />}<p className="p-3 text-sm font-semibold">{item.custom_name || item.description || item.subcategory || item.category}</p></div>)}</div></section></div>}
     </main>
   )
 }
