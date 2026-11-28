@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const admin = getSupabaseAdmin()
   const [{ data: items, error }, { data: rated }, { data: recentSessions }] = await Promise.all([
     admin.from('items').select('*'),
-    admin.from('outfits').select('rating, outfit_items(item_id)').not('rating', 'is', null),
+    admin.from('outfits').select('rating, outfit_items(item_id)').not('rating', 'is', null).order('created_at', { ascending: false }).limit(200),
     admin.from('telegram_widget_sessions').select('item_ids').order('created_at', { ascending: false }).limit(7),
   ])
   if (error) return new Response(error.message, { status: 500 })

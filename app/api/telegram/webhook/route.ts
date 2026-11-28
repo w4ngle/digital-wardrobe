@@ -112,7 +112,7 @@ async function handleOutfitAction(token: string, actionData: string, context: {
   } else if (parsed.action === 'next' && status === 'ready') {
     const [{ data: wardrobe }, { data: rated }] = await Promise.all([
       admin.from('items').select('*'),
-      admin.from('outfits').select('rating, outfit_items(item_id)').not('rating', 'is', null),
+      admin.from('outfits').select('rating, outfit_items(item_id)').not('rating', 'is', null).order('created_at', { ascending: false }).limit(200),
     ])
     const preferences = (rated || []).reduce<{ itemScores: Record<string, number>, rejectedCombos: string[][] }>((value, outfit) => {
       const ids = outfit.outfit_items.map((link: { item_id: string }) => link.item_id)

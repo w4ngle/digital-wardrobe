@@ -23,7 +23,7 @@ export async function GET() {
   if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
 
   const admin = getSupabaseAdmin()
-  const { data: outfits, error } = await admin.from('outfits').select('*, outfit_items(item:items(*))').order('created_at', { ascending: false })
+  const { data: outfits, error } = await admin.from('outfits').select('*, outfit_items(item:items(*))').order('created_at', { ascending: false }).limit(200)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const allItems = (outfits || []).flatMap((outfit) => outfit.outfit_items.map((link: { item: Item | null }) => link.item).filter((item: Item | null): item is Item => Boolean(item)))
