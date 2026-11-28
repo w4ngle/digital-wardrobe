@@ -12,7 +12,7 @@ const OutfitUpdate = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   occasion: z.string().trim().max(100).nullable().optional(),
   notes: z.string().trim().max(500).nullable().optional(),
-  itemIds: z.array(z.string().uuid()).min(1).max(10).optional(),
+  itemIds: z.array(z.string().uuid()).min(1).max(10).refine((ids) => new Set(ids).size === ids.length).optional(),
 })
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,13 +28,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     : await admin.from('outfits').select().eq('id', id).single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (itemIds) {
-    const { data: oldLinks } = await admin.from('outfit_items').select('item_id').eq('outfit_id', id)
-    const { error: deleteError } = await admin.from('outfit_items').delete().eq('outfit_id', id)
-    if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
-    const { error: insertError } = await admin.from('outfit_items').insert(itemIds.map((item_id) => ({ outfit_id: id, item_id })))
-    if (insertError) {
-      if (oldLinks?.length) await admin.from('outfit_items').insert(oldLinks.map(({ item_id }) => ({ outfit_id: id, item_id })))
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    const { data: oldLinks, error: oldLinksError } = await admin.from('outfit_items').select('id').eq('outfit_id', id)
+    if (oldLinksError) return NextResponse.json({ error: oldLinksError.message }, { status: 500 })
+    const { data: newLinks, error: insertError } = await admin.from('outfit_items').insert(itemIds.map((item_id) => ({ outfit_id: id, item_id }))).select('id')
+    if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
+    if (oldLinks?.length) {
+      const { error: deleteError } = await admin.from('outfit_items').delete().in('id', oldLinks.map((link) => link.id))
+      if (deleteError) {
+        if (newLinks?.length) await admin.from('outfit_items').delete().in('id', newLinks.map((link) => link.id))
+        return NextResponse.json({ error: deleteError.message }, { status: 500 })
+      }
     }
   }
   if (parsed.data.proposal_status && process.env.TELEGRAM_BOT_TOKEN && allowedTelegramUserIds()[1]) {

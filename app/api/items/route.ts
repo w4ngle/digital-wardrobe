@@ -48,9 +48,13 @@ export async function POST(request: NextRequest) {
   const parsed = ItemInput.safeParse(await request.json())
   if (!parsed.success) return NextResponse.json({ error: 'Проверьте поля вещи' }, { status: 400 })
 
+  const admin = getSupabaseAdmin()
   const input = { ...parsed.data, photo_url: photoPath(parsed.data.photo_url) }
-  const { data, error } = await getSupabaseAdmin().from('items').insert(input).select().single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const { data, error } = await admin.from('items').insert(input).select().single()
+  if (error) {
+    if (input.photo_url) await admin.storage.from('wardrobe-items').remove([input.photo_url])
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const [item] = await signItemPhotos([data])
   return NextResponse.json(item, { status: 201 })

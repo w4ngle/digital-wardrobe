@@ -69,17 +69,36 @@ async function handleOutfitAction(token: string, actionData: string, context: {
       status = 'worn'
       notice = 'Образ уже отмечен'
     } else {
-    const now = new Date().toISOString()
-    await Promise.all(items.map(async (item) => {
-      await admin.from('items').update({
-        wear_count: (item.wear_count || 0) + 1,
-        wears_since_wash: (item.wears_since_wash || 0) + 1,
-        last_worn_at: now,
-      }).eq('id', item.id)
-      await admin.from('wear_history').insert({ item_id: item.id, worn_at: now })
-    }))
-    status = 'worn'
-    notice = 'Отметила образ на сегодня ✨'
+      const now = new Date().toISOString()
+      const updatedItems: Item[] = []
+      const historyIds: string[] = []
+      let saveFailed = false
+      for (const item of items) {
+        const { error: itemError } = await admin.from('items').update({
+          wear_count: (item.wear_count || 0) + 1,
+          wears_since_wash: (item.wears_since_wash || 0) + 1,
+          last_worn_at: now,
+        }).eq('id', item.id)
+        if (itemError) { saveFailed = true; break }
+        updatedItems.push(item)
+        const { data: history, error: historyError } = await admin.from('wear_history').insert({ item_id: item.id, worn_at: now }).select('id').single()
+        if (historyError) { saveFailed = true; break }
+        historyIds.push(history.id)
+      }
+      if (saveFailed) {
+        await Promise.all(updatedItems.map((item) => admin.from('items').update({
+          wear_count: item.wear_count || 0,
+          wears_since_wash: item.wears_since_wash || 0,
+          last_worn_at: item.last_worn_at || null,
+        }).eq('id', item.id)))
+        if (historyIds.length) await admin.from('wear_history').delete().in('id', historyIds)
+        await admin.from('telegram_widget_sessions').update({ status: 'ready' }).eq('id', session.id)
+        status = 'ready'
+        notice = 'Не удалось сохранить. Попробуйте ещё раз.'
+      } else {
+        status = 'worn'
+        notice = 'Отметила образ на сегодня ✨'
+      }
     }
   } else if (parsed.action === 'nope' && status === 'ready') {
     const { data: outfit } = await admin.from('outfits').insert({
