@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isCronRequest } from '@/lib/cron-auth'
 import { outfitWidgetHtml, outfitWidgetState } from '@/lib/telegram-widget'
 import { outfitCardToken } from '@/lib/outfit-card-token'
+import { moscowDate } from '@/lib/date'
 
 export async function GET(request: Request) {
   if (!isCronRequest(request)) return new Response('Unauthorized', { status: 401 })
@@ -17,17 +18,26 @@ export async function GET(request: Request) {
   const retentionDate = new Date()
   retentionDate.setDate(retentionDate.getDate() - 30)
   await admin.from('telegram_widget_sessions').delete().lt('created_at', retentionDate.toISOString())
-  const [{ data: items, error }, { data: rated }, { data: recentSessions }] = await Promise.all([
+  const [{ data: items, error }, { data: rated }, { data: recentSessions }, { data: trips }] = await Promise.all([
     admin.from('items').select('*'),
     admin.from('outfits').select('rating, outfit_items(item_id)').not('rating', 'is', null).order('created_at', { ascending: false }).limit(200),
     admin.from('telegram_widget_sessions').select('item_ids').order('created_at', { ascending: false }).limit(7),
+    admin.from('trips').select('details').order('created_at', { ascending: false }).limit(10),
   ])
   if (error) return new Response(error.message, { status: 500 })
 
   let weather: Weather = 'Прохладно'
   let rain = false
   try {
-    const forecastResponse = await fetch('https://api.open-meteo.com/v1/forecast?latitude=47.2357&longitude=39.7015&current=temperature_2m,weather_code&daily=temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=Europe%2FMoscow', { signal: AbortSignal.timeout(5000) })
+    const today = moscowDate()
+    const activeTrip = (trips || []).find((trip) => {
+      const details = trip.details as Record<string, unknown>
+      return String(details.startDate || '') <= today && String(details.endDate || '') >= today && Number.isFinite(Number(details.cityLatitude)) && Number.isFinite(Number(details.cityLongitude))
+    })
+    const details = activeTrip?.details as Record<string, unknown> | undefined
+    const latitude = Number(details?.cityLatitude ?? process.env.HOME_LATITUDE ?? 47.2357)
+    const longitude = Number(details?.cityLongitude ?? process.env.HOME_LONGITUDE ?? 39.7015)
+    const forecastResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&daily=temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=auto`, { signal: AbortSignal.timeout(5000) })
     if (!forecastResponse.ok) throw new Error('Weather service error')
     const forecast = await forecastResponse.json()
     const temperature = forecast.current.temperature_2m

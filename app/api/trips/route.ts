@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { hasValidSession } from '@/lib/telegram-auth'
+import { hasOwnerSession, hasValidSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 const TripInput = z.object({
@@ -11,7 +11,7 @@ const TripInput = z.object({
 })
 
 export async function GET() {
-  if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  if (!await hasOwnerSession()) return NextResponse.json({ error: 'Изменять поездки может только владелица' }, { status: 403 })
   const { data, error } = await getSupabaseAdmin().from('trips').select('*').order('created_at', { ascending: false }).limit(10)
   return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json(data)
 }

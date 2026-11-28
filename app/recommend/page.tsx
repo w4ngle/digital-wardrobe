@@ -7,6 +7,7 @@ import { OCCASIONS, OCCASION_DESCRIPTIONS, WEATHER, WEATHER_DESCRIPTIONS, Occasi
 import FastImage from '@/components/FastImage'
 import { STYLES } from '@/lib/taxonomy'
 import { ArrowsClockwise, Lock, LockOpen, ThumbsDown, ThumbsUp } from '@phosphor-icons/react'
+import { moscowDate } from '@/lib/date'
 
 function Choice<T extends string>({ values, value, onChange }: { values: readonly T[], value: T, onChange: (value: T) => void }) {
   return (
@@ -66,6 +67,7 @@ export default function RecommendPage() {
       const response = await fetch('/api/recommend', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: `${occasion}; стиль: ${style}; транспорт: ${transport}; ${rain ? 'дождь; ' : ''}${requiredNumber ? `обязательно использовать вещь №${requiredNumber}; ` : ''}${rediscover ? 'предпочесть давно не ношенные вещи' : ''}`, weather: { tempC: weather === 'Жарко' ? 29 : weather === 'Тепло' ? 22 : weather === 'Прохладно' ? 13 : 2, rain }, request: { occasion, weather, style, rain, transport, requiredItemId: requiredItemId || undefined, rediscover } }),
+        signal: AbortSignal.timeout(25_000),
       })
       if (!response.ok) throw new Error('ai')
       const result = await response.json() as { items: Item[], reasoning: string, source: 'ai' | 'fallback' }
@@ -106,10 +108,11 @@ export default function RecommendPage() {
   }
 
   async function snoozeItem(item: Item) {
-    const date = new Date(); date.setDate(date.getDate() + 3)
+    const date = new Date(`${moscowDate()}T12:00:00+03:00`); date.setDate(date.getDate() + 3)
+    const snoozedUntil = moscowDate(date)
     try {
-      await updateItem(item.id, { snoozed_until: date.toISOString().slice(0, 10) })
-      setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, snoozed_until: date.toISOString().slice(0, 10) } : candidate))
+      await updateItem(item.id, { snoozed_until: snoozedUntil })
+      setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, snoozed_until: snoozedUntil } : candidate))
       setResults((current) => current.filter((result) => !result.items.some((candidate) => candidate.id === item.id)))
     } catch { alert('Не удалось отложить вещь') }
   }

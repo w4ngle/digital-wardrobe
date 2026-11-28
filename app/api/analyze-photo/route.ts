@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { describeImage } from '@/lib/ai/provider'
-import { hasValidSession } from '@/lib/telegram-auth'
+import { hasOwnerSession } from '@/lib/telegram-auth'
 
 export async function POST(req: NextRequest) {
-  if (!await hasValidSession()) {
+  if (!await hasOwnerSession()) {
     return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
   }
 

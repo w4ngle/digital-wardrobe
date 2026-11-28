@@ -1,4 +1,5 @@
 import { Item } from './supabase'
+import { moscowDate } from './date'
 
 export const OCCASIONS = ['На каждый день', 'Университет', 'Прогулка', 'По делам', 'Ресторан / свидание', 'Праздник / на выход', 'Деловое выступление', 'Поездка', 'Тренировка', 'Пляж / бассейн', 'Активный отдых'] as const
 export const OCCASION_DESCRIPTIONS: Record<Occasion, string> = {
@@ -138,7 +139,7 @@ function itemIdentity(item: Item) {
 }
 
 export function recommendOutfits(items: Item[], request: OutfitRequest, limit = 3, preferences: OutfitPreferences = {}): OutfitRecommendation[] {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = moscowDate()
   const availableItems = items.filter((item) => (!item.availability || item.availability === 'available') && (!item.snoozed_until || item.snoozed_until < today))
   const byCategory = (category: string) => {
     const ranked = availableItems
@@ -266,7 +267,7 @@ export function replaceOutfitItem(items: Item[], result: OutfitRecommendation, i
   const current = result.items.find((item) => item.id === itemId)
   if (!current) return result
   const used = new Set(result.items.map((item) => item.id))
-  const today = new Date().toISOString().slice(0, 10)
+  const today = moscowDate()
   const replacement = items
     .filter((item) => item.category === current.category && !used.has(item.id) && (!item.availability || item.availability === 'available') && (!item.snoozed_until || item.snoozed_until < today) && (request.occasion !== 'Тренировка' || item.style === 'Спортивный' || item.training_suitable === true || item.ai_meta?.training_suitable === true))
     .sort((a, b) => itemScore(b, request, preferences) - itemScore(a, request, preferences))[0]

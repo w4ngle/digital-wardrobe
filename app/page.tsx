@@ -102,9 +102,9 @@ export default function Home() {
   }
 
   const handleSnooze = async (item: Item, days: number) => {
-    const date = new Date()
+    const date = new Date(`${moscowDate()}T12:00:00+03:00`)
     date.setDate(date.getDate() + days)
-    const updated = await updateItem(item.id, { snoozed_until: date.toISOString().slice(0, 10) })
+    const updated = await updateItem(item.id, { snoozed_until: moscowDate(date) })
     setItems((current) => current.map((candidate) => candidate.id === item.id ? updated : candidate))
   }
 

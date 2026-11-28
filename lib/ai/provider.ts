@@ -8,7 +8,7 @@ import { ANALYZE_PHOTO_PROMPT_V2 } from './prompts'
 function getOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('OPENAI_API_KEY is not configured')
-  return new OpenAI({ apiKey })
+  return new OpenAI({ apiKey, timeout: 20_000, maxRetries: 0 })
 }
 
 async function geminiJSON(system: string, user: string, imageDataUrl?: string) {
@@ -25,6 +25,7 @@ async function geminiJSON(system: string, user: string, imageDataUrl?: string) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { responseMimeType: 'application/json' } }),
+    signal: AbortSignal.timeout(20_000),
   })
   if (!response.ok) throw new Error(`Gemini error ${response.status}`)
   const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>, usageMetadata?: { promptTokenCount?: number, candidatesTokenCount?: number } }

@@ -7,6 +7,7 @@ import {
   validateTelegramInitData as validateInitData,
   verifySession,
 } from './telegram-signature'
+import { telegramRoleForUser } from './telegram-role'
 
 const COOKIE_NAME = 'wardrobe_session'
 
@@ -33,6 +34,11 @@ export async function hasValidSession() {
   if (process.env.NODE_ENV === 'development') return true
 
   return Boolean(await currentTelegramUserId())
+}
+
+export async function hasOwnerSession() {
+  const userId = await currentTelegramUserId()
+  return telegramRoleForUser(userId, allowedTelegramUserIds()) === 'owner'
 }
 
 export async function currentTelegramUserId() {

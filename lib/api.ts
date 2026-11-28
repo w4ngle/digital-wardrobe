@@ -50,6 +50,14 @@ export function unmarkItemWorn(id: string) {
   return api<Item>(`/api/items/${id}/wear`, { method: 'DELETE' })
 }
 
+export function setOutfitWorn(itemIds: string[], worn: boolean) {
+  return api<Item[]>('/api/wear-outfit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemIds, worn }),
+  })
+}
+
 export function getOutfits() {
   return api<OutfitWithItems[]>('/api/outfits')
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { allowedTelegramUserIds, hasValidSession } from '@/lib/telegram-auth'
+import { allowedTelegramUserIds, hasOwnerSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { z } from 'zod'
 
@@ -16,7 +16,7 @@ const OutfitUpdate = z.object({
 })
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  if (!await hasOwnerSession()) return NextResponse.json({ error: 'Изменять сохранённые образы может только владелица' }, { status: 403 })
   const parsed = OutfitUpdate.safeParse(await request.json())
   if (!parsed.success) return NextResponse.json({ error: 'Проверьте данные образа' }, { status: 400 })
 
@@ -40,15 +40,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       }
     }
   }
+  let notification_warning: string | undefined
   if (parsed.data.proposal_status && process.env.TELEGRAM_BOT_TOKEN && allowedTelegramUserIds()[1]) {
     const labels = { accepted: 'Образ понравился 🤍', declined: 'Сегодня не подошёл', will_wear: 'Этот образ наденут ✨', saved: 'Образ сохранён', pending: 'Предложение ждёт ответа' }
-    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: allowedTelegramUserIds()[1], text: labels[parsed.data.proposal_status] }) })
+    try {
+      const notification = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(8000), body: JSON.stringify({ chat_id: allowedTelegramUserIds()[1], text: labels[parsed.data.proposal_status] }) })
+      if (!notification.ok) notification_warning = 'Ответ сохранён, но уведомление не отправилось'
+    } catch { notification_warning = 'Ответ сохранён, но уведомление не отправилось' }
   }
-  return NextResponse.json(data)
+  return NextResponse.json({ ...data, notification_warning })
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  if (!await hasOwnerSession()) return NextResponse.json({ error: 'Удалять образы может только владелица' }, { status: 403 })
 
   const { id } = await params
   const { error } = await getSupabaseAdmin().from('outfits').delete().eq('id', id)

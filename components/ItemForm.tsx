@@ -105,7 +105,7 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
         reader.onerror = reject
         reader.readAsDataURL(photoFile)
       })
-      const response = await fetch('/api/analyze-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl }) })
+      const response = await fetch('/api/analyze-photo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl }), signal: AbortSignal.timeout(25_000) })
       if (!response.ok) throw new Error('analysis')
       const result = await response.json()
       setCategory(result.category); setColor(result.color); setSeason(result.season); setStyle(result.style)

@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from 'react'
 import Script from 'next/script'
+import { usePathname, useRouter } from 'next/navigation'
 
 declare global {
   type TelegramLocation = {
@@ -35,6 +36,9 @@ declare global {
 
 export default function TelegramApp({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<'loading' | 'authorized' | 'denied'>('loading')
+  const [role, setRole] = useState<'owner' | 'partner' | null>(null)
+  const pathname = usePathname()
+  const router = useRouter()
 
   const authenticate = async (initData: string) => {
     const response = await fetch('/api/auth/telegram', {
@@ -42,6 +46,8 @@ export default function TelegramApp({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initData }),
     })
+    const session = response.ok ? await response.json() as { role?: 'owner' | 'partner' } : null
+    setRole(session?.role || null)
     setStatus(response.ok ? 'authorized' : 'denied')
   }
 
@@ -58,11 +64,17 @@ export default function TelegramApp({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetch('/api/auth/telegram')
-      .then((response) => setStatus((current) =>
-        current === 'authorized' ? current : response.ok ? 'authorized' : 'denied'
-      ))
+      .then(async (response) => {
+        const session = response.ok ? await response.json() as { role?: 'owner' | 'partner' } : null
+        setRole(session?.role || null)
+        setStatus((current) => current === 'authorized' ? current : response.ok ? 'authorized' : 'denied')
+      })
       .catch(() => setStatus('denied'))
   }, [])
+
+  useEffect(() => {
+    if (role === 'partner' && ['/', '/today', '/packing'].includes(pathname)) router.replace('/outfits')
+  }, [pathname, role, router])
 
   return (
     <>

@@ -47,6 +47,11 @@ export async function POST(request: NextRequest) {
   const admin = getSupabaseAdmin()
   const suggested_by = userId === allowedTelegramUserIds()[0] ? 'owner' : 'partner'
   const proposal_status = suggested_by === 'partner' ? 'pending' : 'saved'
+  const { data: selectedItems, error: itemsError } = await admin.from('items').select('*').in('id', parsed.data.itemIds)
+  if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 })
+  if (selectedItems?.length !== parsed.data.itemIds.length || selectedItems.some((item) => item.availability && item.availability !== 'available')) {
+    return NextResponse.json({ error: 'В образе есть недоступная или удалённая вещь' }, { status: 400 })
+  }
   const { data: outfit, error } = await admin.from('outfits').insert({ ...parsed.data.outfit, suggested_by, proposal_status }).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -57,16 +62,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: linksError.message }, { status: 500 })
   }
 
-  const { data: items } = await admin.from('items').select('*').in('id', parsed.data.itemIds)
-
+  let notification_warning: string | undefined
   if (suggested_by === 'partner' && process.env.TELEGRAM_BOT_TOKEN && allowedTelegramUserIds()[0]) {
-    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        chat_id: allowedTelegramUserIds()[0],
-        text: `Тебе предложили новый образ 💌\n\n${parsed.data.outfit.suggested_by_name || 'Любимый'}: ${parsed.data.outfit.partner_message || parsed.data.outfit.name}`,
-        reply_markup: { inline_keyboard: [[{ text: 'Посмотреть', web_app: { url: outfitsUrl } }]] },
-      }),
-    })
+    try {
+      const notification = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(8000), body: JSON.stringify({
+          chat_id: allowedTelegramUserIds()[0],
+          text: `Тебе предложили новый образ 💌\n\n${parsed.data.outfit.suggested_by_name || 'Любимый'}: ${parsed.data.outfit.partner_message || parsed.data.outfit.name}`,
+          reply_markup: { inline_keyboard: [[{ text: 'Посмотреть', web_app: { url: outfitsUrl } }]] },
+        }),
+      })
+      if (!notification.ok) notification_warning = 'Образ сохранён, но уведомление не отправилось'
+    } catch { notification_warning = 'Образ сохранён, но уведомление не отправилось' }
   }
-  return NextResponse.json({ ...outfit, items: await signItemPhotos(items || []) }, { status: 201 })
+  return NextResponse.json({ ...outfit, items: await signItemPhotos(selectedItems || []), notification_warning }, { status: 201 })
 }

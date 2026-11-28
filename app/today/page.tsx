@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { getItems, getOutfits, getWearHistory, markItemWorn, unmarkItemWorn, updateItem, updateOutfit } from '@/lib/api'
+import { getItems, getOutfits, getWearHistory, setOutfitWorn, updateItem, updateOutfit } from '@/lib/api'
 import { Item, OutfitWithItems, WearRecord } from '@/lib/supabase'
 import OutfitCollage from '@/components/OutfitCollage'
 import { Cloud } from '@phosphor-icons/react'
@@ -72,7 +72,7 @@ export default function TodayPage() {
   const favoriteItems = items.filter((item) => item.is_favorite)
   const usableOutfits = outfits.filter((outfit) => outfit.rating !== -1)
   const favoriteOutfits = usableOutfits.filter((outfit) => outfit.is_favorite || outfit.rating === 1)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = moscowDate()
   const planned = usableOutfits.filter((outfit) => outfit.planned_for && outfit.planned_for >= today).sort((a, b) => a.planned_for!.localeCompare(b.planned_for!))
   const heroOutfit = useMemo(() => {
     if (!items.length) return null
@@ -107,7 +107,7 @@ export default function TodayPage() {
     try {
       const today = moscowDate()
       const alreadyWorn = heroWorn ?? heroOutfit.items.every((item) => item.last_worn_at && moscowDate(item.last_worn_at) === today)
-      const worn = await Promise.all(heroOutfit.items.map((item) => alreadyWorn ? unmarkItemWorn(item.id) : markItemWorn(item.id)))
+      const worn = await setOutfitWorn(heroOutfit.items.map((item) => item.id), !alreadyWorn)
       const byId = new Map(worn.map((item) => [item.id, item]))
       setItems((current) => current.map((item) => byId.get(item.id) || item))
       setHeroWorn(!alreadyWorn)

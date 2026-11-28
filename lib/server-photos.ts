@@ -6,6 +6,8 @@ import { Item } from './supabase'
 import { getSupabaseAdmin } from './supabase-admin'
 import { localDemoPhoto } from './demo-items'
 
+const signedPhotoCache = new Map<string, { url: string, expiresAt: number }>()
+
 export function photoPath(value: string | null) {
   if (!value) return null
   if (value.startsWith('/demo-items/')) {
@@ -28,10 +30,22 @@ export async function signItemPhotos<T extends Item>(items: T[]) {
     return existsSync(join(process.cwd(), 'public', 'demo-items', filename)) ? url : null
   })
   const paths = items.map((item, index) => localUrls[index] ? null : photoPath(item.photo_url))
+  const now = Date.now()
   const uniquePaths = [...new Set(paths.filter((path): path is string => Boolean(path)))]
   if (!uniquePaths.length) return items.map((item, index) => ({ ...item, photo_url: localUrls[index] }))
-  const { data, error } = await storage.createSignedUrls(uniquePaths, 60 * 60)
-  if (error) throw new Error(`Не удалось подготовить фотографии: ${error.message}`)
-  const urls = new Map((data || []).map((entry) => [entry.path, entry.signedUrl]))
+  const urls = new Map(uniquePaths.flatMap((path) => {
+    const cached = signedPhotoCache.get(path)
+    return cached && cached.expiresAt > now ? [[path, cached.url] as const] : []
+  }))
+  const missingPaths = uniquePaths.filter((path) => !urls.has(path))
+  if (missingPaths.length) {
+    const { data, error } = await storage.createSignedUrls(missingPaths, 60 * 60)
+    if (error) throw new Error(`Не удалось подготовить фотографии: ${error.message}`)
+    for (const entry of data || []) {
+      if (!entry.path || !entry.signedUrl) continue
+      urls.set(entry.path, entry.signedUrl)
+      signedPhotoCache.set(entry.path, { url: entry.signedUrl, expiresAt: now + 50 * 60 * 1000 })
+    }
+  }
   return items.map((item, index) => ({ ...item, photo_url: localUrls[index] || (paths[index] ? urls.get(paths[index]!) || null : null) }))
 }

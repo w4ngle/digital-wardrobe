@@ -7,6 +7,7 @@ import OutfitCollage from '@/components/OutfitCollage'
 import { Heart, PencilSimple, X } from '@phosphor-icons/react'
 import FastImage from '@/components/FastImage'
 import { CATEGORIES, SEASONS, STYLES } from '@/lib/taxonomy'
+import { moscowDate } from '@/lib/date'
 
 export default function OutfitsPage() {
   const [outfits, setOutfits] = useState<OutfitWithItems[]>([])
@@ -30,7 +31,7 @@ export default function OutfitsPage() {
 
   async function loadData() {
     const [outfitsData, itemsData] = await Promise.all([getOutfits(), getItems()])
-    const today = new Date().toISOString().slice(0, 10)
+    const today = moscowDate()
     const normalized = outfitsData.map((outfit) => outfit.planned_for && outfit.planned_for < today ? { ...outfit, planned_for: null } : outfit)
     setOutfits(normalized)
     await Promise.all(outfitsData.filter((outfit) => outfit.planned_for && outfit.planned_for < today).map((outfit) => updateOutfit(outfit.id, { planned_for: null })))
@@ -41,7 +42,7 @@ export default function OutfitsPage() {
     fetch('/api/auth/telegram').then((response) => response.json()).then((session) => setRole(session.role || 'owner')).catch(() => undefined)
     Promise.all([getOutfits(), getItems()])
       .then(([outfitsData, itemsData]) => {
-        const today = new Date().toISOString().slice(0, 10)
+        const today = moscowDate()
         setOutfits(outfitsData.map((outfit) => outfit.planned_for && outfit.planned_for < today ? { ...outfit, planned_for: null } : outfit))
         void Promise.all(outfitsData.filter((outfit) => outfit.planned_for && outfit.planned_for < today).map((outfit) => updateOutfit(outfit.id, { planned_for: null })))
         setAllItems(itemsData)
@@ -82,8 +83,10 @@ export default function OutfitsPage() {
     if (selectedItemIds.length < 2) return
     setSaving(true)
     try {
-      if (editingId) await editOutfit(editingId, { name, occasion: occasion.trim() || null, notes: notes.trim() || null, itemIds: selectedItemIds })
-      else await createOutfit({ name, occasion: occasion.trim() || null, notes: notes.trim() || null, suggested_by_name: role === 'partner' ? authorName.trim() : null, partner_message: role === 'partner' ? partnerMessage.trim() || null : null }, selectedItemIds)
+      const saved = editingId
+        ? await editOutfit(editingId, { name, occasion: occasion.trim() || null, notes: notes.trim() || null, itemIds: selectedItemIds })
+        : await createOutfit({ name, occasion: occasion.trim() || null, notes: notes.trim() || null, suggested_by_name: role === 'partner' ? authorName.trim() : null, partner_message: role === 'partner' ? partnerMessage.trim() || null : null }, selectedItemIds)
+      if (saved.notification_warning) alert(saved.notification_warning)
       setName('')
       setOccasion('')
       setNotes('')
@@ -118,6 +121,7 @@ export default function OutfitsPage() {
   async function handleProposal(outfit: OutfitWithItems, proposal_status: 'accepted' | 'declined' | 'will_wear') {
     const owner_reaction = proposal_status === 'accepted' ? 'Нравится 🤍' : proposal_status === 'will_wear' ? 'Надену ✨' : 'Не в этот раз'
     const updated = await updateOutfit(outfit.id, { proposal_status, owner_reaction })
+    if (updated.notification_warning) alert(updated.notification_warning)
     setOutfits((current) => current.map((candidate) => candidate.id === outfit.id ? { ...candidate, ...updated } : candidate))
   }
 
@@ -188,16 +192,16 @@ export default function OutfitsPage() {
                     <div className="min-w-0"><h2 className="truncate font-semibold">{outfit.name}</h2><p className="mt-1 truncate text-xs text-[#817b70]">{outfit.suggested_by === 'partner' ? '💌 Предложение от любимого' : outfit.occasion || `${outfit.items.length} вещи`}</p></div>
                     <div className="flex shrink-0 gap-2">
                       {role === 'owner' && <button onClick={() => startEdit(outfit)} className="text-[#52635a]" aria-label="Изменить образ"><PencilSimple size={20} /></button>}
-                      <button onClick={() => handleFavorite(outfit)} className="text-[#6f1820]" aria-label={outfit.is_favorite ? 'Убрать из избранного' : 'Добавить в избранное'}><Heart size={20} weight={outfit.is_favorite ? 'fill' : 'regular'} aria-hidden /></button>
-                      <button onClick={() => handleDelete(outfit.id)} className="text-[#6f1820]" aria-label="Удалить образ"><X size={20} aria-hidden /></button>
+                      {role === 'owner' && <button onClick={() => handleFavorite(outfit)} className="text-[#6f1820]" aria-label={outfit.is_favorite ? 'Убрать из избранного' : 'Добавить в избранное'}><Heart size={20} weight={outfit.is_favorite ? 'fill' : 'regular'} aria-hidden /></button>}
+                      {role === 'owner' && <button onClick={() => handleDelete(outfit.id)} className="text-[#6f1820]" aria-label="Удалить образ"><X size={20} aria-hidden /></button>}
                     </div>
                   </div>
                   {outfit.notes && <p className="mt-3 line-clamp-2 text-xs leading-5 text-[#746e64]">{outfit.notes}</p>}
                   {outfit.suggested_by === 'partner' && <div className="mt-3 rounded-xl bg-[#f3ede4] p-3 text-xs"><p className="font-semibold">От {outfit.suggested_by_name || 'любимого'}</p>{outfit.partner_message && <p className="mt-1 text-[#746e64]">{outfit.partner_message}</p>}{role === 'owner' && outfit.proposal_status === 'pending' ? <div className="mt-3 grid grid-cols-3 gap-1"><button onClick={() => handleProposal(outfit, 'accepted')} className="rounded-lg bg-white px-2 py-2">Нравится</button><button onClick={() => handleProposal(outfit, 'will_wear')} className="rounded-lg bg-[#1f422f] px-2 py-2 text-white">Надену</button><button onClick={() => handleProposal(outfit, 'declined')} className="rounded-lg bg-white px-2 py-2">Не сейчас</button></div> : <p className="mt-2 font-medium">{outfit.owner_reaction || (outfit.proposal_status === 'pending' ? 'Ждёт ответа' : '')}</p>}</div>}
-                  <label className="mt-3 block text-[10px] font-semibold uppercase tracking-wide text-[#817b70]">
+                  {role === 'owner' && <label className="mt-3 block text-[10px] font-semibold uppercase tracking-wide text-[#817b70]">
                     Запланировать
-                    <input type="date" min={new Date().toISOString().slice(0, 10)} value={outfit.planned_for || ''} onChange={(event) => handlePlan(outfit, event.target.value)} className="mt-1 block max-w-full rounded-lg border border-[#ddd7cc] bg-white px-2 py-2 text-xs font-normal normal-case tracking-normal" />
-                  </label>
+                    <input type="date" min={moscowDate()} value={outfit.planned_for || ''} onChange={(event) => handlePlan(outfit, event.target.value)} className="mt-1 block max-w-full rounded-lg border border-[#ddd7cc] bg-white px-2 py-2 text-xs font-normal normal-case tracking-normal" />
+                  </label>}
                 </div>
               </article>
             ))}

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { hasValidSession } from '@/lib/telegram-auth'
+import { hasOwnerSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { photoPath } from '@/lib/server-photos'
 
 export async function DELETE() {
-  if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  if (!await hasOwnerSession()) return NextResponse.json({ error: 'Изменять гардероб может только владелица' }, { status: 403 })
   const admin = getSupabaseAdmin()
   const { data, error } = await admin.from('items').select('id, photo_url').contains('ai_meta', { demo: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

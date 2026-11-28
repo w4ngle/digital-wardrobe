@@ -1,4 +1,4 @@
-import { botReply, todayUrl } from '@/lib/bot-messages'
+import { botReply, helpMessage, todayUrl, welcomeMessage } from '@/lib/bot-messages'
 import { allowedTelegramUserIds } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { OutfitRequest, recommendOutfits } from '@/lib/recommendations'
@@ -36,7 +36,7 @@ async function handleOutfitAction(token: string, actionData: string, context: {
   userId: number, queryId: string, widget: boolean, chatId?: number, messageId?: number, inlineMessageId?: string,
 }) {
   const parsed = parseOutfitWidgetAction(actionData)
-  if (!parsed || !allowedTelegramUserIds().includes(context.userId)) return false
+  if (!parsed || context.userId !== allowedTelegramUserIds()[0]) return false
 
   const admin = getSupabaseAdmin()
   const { data: session } = await admin.from('telegram_widget_sessions').select('*').eq('id', parsed.sessionId).single()
@@ -70,33 +70,13 @@ async function handleOutfitAction(token: string, actionData: string, context: {
       status = 'worn'
       notice = 'Образ уже отмечен'
     } else {
-      const now = new Date().toISOString()
-      const updatedItems: Item[] = []
-      const historyIds: string[] = []
-      let saveFailed = false
-      for (const item of items) {
-        const { error: itemError } = await admin.from('items').update({
-          wear_count: (item.wear_count || 0) + 1,
-          wears_since_wash: (item.wears_since_wash || 0) + 1,
-          last_worn_at: now,
-        }).eq('id', item.id)
-        if (itemError) { saveFailed = true; break }
-        updatedItems.push(item)
-        const { data: history, error: historyError } = await admin.from('wear_history').insert({ item_id: item.id, worn_at: now }).select('id').single()
-        if (historyError) { saveFailed = true; break }
-        historyIds.push(history.id)
-      }
-      if (saveFailed) {
-        await Promise.all(updatedItems.map((item) => admin.from('items').update({
-          wear_count: item.wear_count || 0,
-          wears_since_wash: item.wears_since_wash || 0,
-          last_worn_at: item.last_worn_at || null,
-        }).eq('id', item.id)))
-        if (historyIds.length) await admin.from('wear_history').delete().in('id', historyIds)
+      const { data: wornItems, error: wearError } = await admin.rpc('mark_items_worn', { p_item_ids: items.map((item) => item.id) })
+      if (wearError) {
         await admin.from('telegram_widget_sessions').update({ status: 'ready' }).eq('id', session.id)
         status = 'ready'
         notice = 'Не удалось сохранить. Попробуйте ещё раз.'
       } else {
+        items = (wornItems || []) as Item[]
         status = 'worn'
         notice = 'Отметила образ на сегодня ✨'
       }
@@ -194,33 +174,60 @@ export async function POST(request: Request) {
     chatId: callback.message?.chat.id, messageId: callback.message?.message_id,
   })) return Response.json({ ok: true })
 
-  if (callback && allowedTelegramUserIds().includes(callback.from.id) && callback.data?.startsWith('laundry:')) {
+  if (callback && callback.from.id === allowedTelegramUserIds()[0] && callback.data?.startsWith('laundry:')) {
     const admin = getSupabaseAdmin()
     const since = moscowDayStart()
     const { data: worn } = await admin.from('items').select('id').gte('last_worn_at', since.toISOString())
     const ids = worn?.map((item) => item.id) || []
-    if (ids.length && callback.data === 'laundry:all') {
-      const returnAt = new Date(); returnAt.setDate(returnAt.getDate() + 2)
-      await admin.from('items').update({ availability: 'laundry', laundry_return_at: returnAt.toISOString() }).in('id', ids)
-      await admin.from('wear_history').update({ laundry_decision: 'laundry' }).in('item_id', ids).gte('worn_at', since.toISOString())
-    } else if (ids.length) await admin.from('wear_history').update({ laundry_decision: 'keep' }).in('item_id', ids).gte('worn_at', since.toISOString())
-    await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: callback.id, text: callback.data === 'laundry:all' ? 'Отправила в стирку 🧺' : 'Оставила доступными ✨' }) })
+    const returnAt = new Date(); returnAt.setDate(returnAt.getDate() + 2)
+    const { error: laundryError } = ids.length ? await admin.rpc('set_items_laundry', {
+      p_item_ids: ids,
+      p_since: since.toISOString(),
+      p_laundry: callback.data === 'laundry:all',
+      p_return_at: returnAt.toISOString(),
+    }) : { error: null }
+    await telegram(token, 'answerCallbackQuery', {
+      callback_query_id: callback.id,
+      text: laundryError ? 'Не удалось сохранить. Попробуйте ещё раз.' : callback.data === 'laundry:all' ? 'Отправила в стирку 🧺' : 'Оставила доступными ✨',
+    })
+    return Response.json({ ok: true })
+  }
+  if (callback) {
+    await telegram(token, 'answerCallbackQuery', { callback_query_id: callback.id, text: 'Это действие доступно только владелице гардероба' })
     return Response.json({ ok: true })
   }
   const message = update.message
   if (!message || !message.from?.id || !allowedTelegramUserIds().includes(message.from.id)) return Response.json({ ok: true })
+
+  const isOwner = message.from.id === allowedTelegramUserIds()[0]
+  const isStart = message.text?.startsWith('/start') === true
+  let reply = botReply(message.text)
+  let shouldRememberWelcome = false
+  if (isStart && isOwner) {
+    const { data: state } = await getSupabaseAdmin().from('telegram_user_state')
+      .select('welcome_shown_at').eq('telegram_user_id', message.from.id).maybeSingle()
+    reply = state?.welcome_shown_at ? helpMessage : welcomeMessage
+    shouldRememberWelcome = !state?.welcome_shown_at
+  } else if (isStart) reply = helpMessage
 
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id: message.chat.id,
-      text: botReply(message.text),
+      text: reply,
       reply_markup: {
         inline_keyboard: [[{ text: 'Открыть гардероб', web_app: { url: todayUrl } }]],
       },
     }),
   })
+
+  if (response.ok && shouldRememberWelcome) {
+    await getSupabaseAdmin().from('telegram_user_state').upsert({
+      telegram_user_id: message.from.id,
+      welcome_shown_at: new Date().toISOString(),
+    })
+  }
 
   return response.ok ? Response.json({ ok: true }) : new Response('Telegram API error', { status: 502 })
 }

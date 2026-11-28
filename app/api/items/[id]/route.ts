@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES } from '@/lib/taxonomy'
-import { hasValidSession } from '@/lib/telegram-auth'
+import { hasOwnerSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { photoPath, signItemPhotos } from '@/lib/server-photos'
 
@@ -34,7 +34,7 @@ const ItemUpdate = z.object({
 })
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  if (!await hasOwnerSession()) return NextResponse.json({ error: 'Изменять гардероб может только владелица' }, { status: 403 })
 
   const parsed = ItemUpdate.safeParse(await request.json())
   if (!parsed.success) return NextResponse.json({ error: 'Проверьте поля вещи' }, { status: 400 })
@@ -61,7 +61,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  if (!await hasOwnerSession()) return NextResponse.json({ error: 'Изменять гардероб может только владелица' }, { status: 403 })
 
   const { id } = await params
   const admin = getSupabaseAdmin()

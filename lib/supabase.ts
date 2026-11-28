@@ -50,6 +50,7 @@ export type Outfit = {
   partner_message?: string | null
   proposal_status?: 'saved' | 'pending' | 'accepted' | 'declined' | 'will_wear'
   owner_reaction?: string | null
+  notification_warning?: string
   created_at: string
 }
 

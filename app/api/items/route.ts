@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES } from '@/lib/taxonomy'
-import { hasValidSession } from '@/lib/telegram-auth'
+import { hasOwnerSession, hasValidSession } from '@/lib/telegram-auth'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { photoPath, signItemPhotos } from '@/lib/server-photos'
 import { uniqueDemoItems } from '@/lib/demo-items'
@@ -43,7 +43,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!await hasValidSession()) return NextResponse.json({ error: 'Доступ запрещён' }, { status: 401 })
+  if (!await hasOwnerSession()) return NextResponse.json({ error: 'Изменять гардероб может только владелица' }, { status: 403 })
 
   const parsed = ItemInput.safeParse(await request.json())
   if (!parsed.success) return NextResponse.json({ error: 'Проверьте поля вещи' }, { status: 400 })
