@@ -14,6 +14,9 @@ export async function GET(request: Request) {
   if (!token || !chatId) return new Response('Telegram is not configured', { status: 500 })
 
   const admin = getSupabaseAdmin()
+  const retentionDate = new Date()
+  retentionDate.setDate(retentionDate.getDate() - 30)
+  await admin.from('telegram_widget_sessions').delete().lt('created_at', retentionDate.toISOString())
   const [{ data: items, error }, { data: rated }, { data: recentSessions }] = await Promise.all([
     admin.from('items').select('*'),
     admin.from('outfits').select('rating, outfit_items(item_id)').not('rating', 'is', null).order('created_at', { ascending: false }).limit(200),
@@ -24,7 +27,9 @@ export async function GET(request: Request) {
   let weather: Weather = 'Прохладно'
   let rain = false
   try {
-    const forecast = await fetch('https://api.open-meteo.com/v1/forecast?latitude=47.2357&longitude=39.7015&current=temperature_2m,weather_code&daily=temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=Europe%2FMoscow').then((response) => response.json())
+    const forecastResponse = await fetch('https://api.open-meteo.com/v1/forecast?latitude=47.2357&longitude=39.7015&current=temperature_2m,weather_code&daily=temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=Europe%2FMoscow', { signal: AbortSignal.timeout(5000) })
+    if (!forecastResponse.ok) throw new Error('Weather service error')
+    const forecast = await forecastResponse.json()
     const temperature = forecast.current.temperature_2m
     weather = temperature >= 26 ? 'Жарко' : temperature >= 18 ? 'Тепло' : temperature <= 5 ? 'Холодно' : 'Прохладно'
     rain = forecast.current.weather_code >= 51 || forecast.daily.precipitation_probability_max[0] >= 50

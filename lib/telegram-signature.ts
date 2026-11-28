@@ -29,7 +29,7 @@ export function validateTelegramInitData(
   const supplied = Buffer.from(hash, 'hex')
 
   if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null
-  if (now - authDate > INIT_DATA_TTL_SECONDS) return null
+  if (authDate > now + 60 || now - authDate > INIT_DATA_TTL_SECONDS) return null
 
   try {
     const user = JSON.parse(userJson) as { id?: number }

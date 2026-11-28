@@ -31,4 +31,9 @@ describe('Telegram signatures', () => {
     expect(validateTelegramInitData(initData, 'bot-token', [42, 7], 1_001)).toBe(7)
     expect(verifySession(createSession(7, 'bot-token', 1_000), 'bot-token', [42, 7], 1_001)).toBe(true)
   })
+
+  it('rejects initData dated in the future', () => {
+    const initData = signedInitData('bot-token', 42, 2_000)
+    expect(validateTelegramInitData(initData, 'bot-token', 42, 1_000)).toBeNull()
+  })
 })
