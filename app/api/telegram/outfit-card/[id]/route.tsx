@@ -3,8 +3,30 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { signItemPhotos } from '@/lib/server-photos'
 import { Item } from '@/lib/supabase'
 import { isValidOutfitCardToken } from '@/lib/outfit-card-token'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 export const runtime = 'nodejs'
+
+async function embeddedPhoto(url: string | null, requestUrl: string) {
+  if (!url) return null
+  try {
+    if (url.startsWith('/demo-items/')) {
+      const filename = new URL(url, requestUrl).pathname.split('/').pop()
+      if (!filename || !/^[a-z0-9-]+\.webp$/i.test(filename)) return null
+      const bytes = await readFile(join(process.cwd(), 'public', 'demo-items', filename))
+      return `data:image/webp;base64,${bytes.toString('base64')}`
+    }
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    if (!response.ok) return null
+    const type = response.headers.get('content-type') || 'image/jpeg'
+    if (!type.startsWith('image/')) return null
+    const bytes = Buffer.from(await response.arrayBuffer())
+    return bytes.length <= 2 * 1024 * 1024 ? `data:${type};base64,${bytes.toString('base64')}` : null
+  } catch {
+    return null
+  }
+}
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -15,10 +37,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { data: session } = await admin.from('telegram_widget_sessions').select('item_ids').eq('id', id).single()
   if (!session) return new Response('Not found', { status: 404 })
   const { data } = await admin.from('items').select('*').in('id', session.item_ids)
-  const items = (await signItemPhotos((data || []) as Item[])).map((item) => ({
+  const signedItems = await signItemPhotos((data || []) as Item[])
+  const items = await Promise.all(signedItems.map(async (item) => ({
     ...item,
-    photo_url: item.photo_url?.startsWith('/') ? new URL(item.photo_url, request.url).href : item.photo_url,
-  }))
+    photo_url: await embeddedPhoto(item.photo_url, request.url),
+  })))
 
   return new ImageResponse(
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: 54, background: '#f4efe5', color: '#193328', fontFamily: 'sans-serif' }}>
