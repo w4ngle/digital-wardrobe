@@ -28,7 +28,7 @@ type TelegramUpdate = {
 
 async function telegram(token: string, method: string, body: Record<string, unknown>) {
   return fetch(`https://api.telegram.org/bot${token}/${method}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000),
   })
 }
 
@@ -102,13 +102,28 @@ async function handleOutfitAction(token: string, actionData: string, context: {
       }
     }
   } else if (parsed.action === 'nope' && status === 'ready') {
-    const { data: outfit } = await admin.from('outfits').insert({
+    const { data: claimed, error: claimError } = await admin.from('telegram_widget_sessions')
+      .update({ status: 'rejected' }).eq('id', session.id).eq('status', 'ready').select('id').maybeSingle()
+    if (claimError || !claimed) {
+      status = claimError ? 'ready' : 'rejected'
+      notice = claimError ? 'Не удалось сохранить. Попробуйте ещё раз.' : 'Оценка уже сохранена'
+    } else {
+    const { data: outfit, error: outfitError } = await admin.from('outfits').insert({
       name: 'Не моё · утренний образ', occasion: 'На каждый день', notes: 'Оценка из Telegram', rating: -1,
     }).select('id').single()
-    if (outfit) await admin.from('outfit_items').insert(items.map((item) => ({ outfit_id: outfit.id, item_id: item.id })))
-    status = 'rejected'
-    notice = 'Такое сочетание больше не предложу'
-    await admin.from('telegram_widget_sessions').update({ status }).eq('id', session.id)
+    const { error: linksError } = outfit
+      ? await admin.from('outfit_items').insert(items.map((item) => ({ outfit_id: outfit.id, item_id: item.id })))
+      : { error: outfitError || new Error('Outfit was not created') }
+    if (outfitError || linksError) {
+      if (outfit) await admin.from('outfits').delete().eq('id', outfit.id)
+      await admin.from('telegram_widget_sessions').update({ status: 'ready' }).eq('id', session.id)
+      status = 'ready'
+      notice = 'Не удалось сохранить. Попробуйте ещё раз.'
+    } else {
+      status = 'rejected'
+      notice = 'Такое сочетание больше не предложу'
+    }
+    }
   } else if (parsed.action === 'next' && status === 'ready') {
     const [{ data: wardrobe }, { data: rated }] = await Promise.all([
       admin.from('items').select('*'),
@@ -124,9 +139,12 @@ async function handleOutfitAction(token: string, actionData: string, context: {
     const next = recommendOutfits((wardrobe || []) as Item[], session.request as OutfitRequest, 8, preferences)
       .find((candidate) => candidate.items.map((item) => item.id).sort().join(':') !== currentKey)
     if (next) {
-      items = next.items
-      notice = 'Подобрала другой образ'
-      await admin.from('telegram_widget_sessions').update({ item_ids: items.map((item) => item.id) }).eq('id', session.id)
+      const { error: updateError } = await admin.from('telegram_widget_sessions').update({ item_ids: next.items.map((item) => item.id) }).eq('id', session.id)
+      if (updateError) notice = 'Не удалось заменить образ. Попробуйте ещё раз.'
+      else {
+        items = next.items
+        notice = 'Подобрала другой образ'
+      }
     } else notice = 'Другого подходящего образа пока нет'
   } else notice = status === 'worn' ? 'Образ уже отмечен' : 'Оценка уже сохранена'
 

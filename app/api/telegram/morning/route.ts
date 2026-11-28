@@ -55,13 +55,13 @@ export async function GET(request: Request) {
       caption: morningOutfitMessage(outfit.items),
       allow_queries: true,
       reply_markup: { inline_keyboard: [[{ text: 'Открыть приложение', web_app: { url: recommendUrl } }]] },
-    }),
+    }), signal: AbortSignal.timeout(8000),
   })
 
   if (response.ok) return Response.json({ ok: true, widget: true })
 
   const fallback = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(8000), body: JSON.stringify({
       chat_id: chatId, photo: `${appUrl}/api/telegram/outfit-card/${session.id}?token=${outfitCardToken(session.id)}`, caption: morningOutfitMessage(outfit.items),
       reply_markup: { inline_keyboard: [[
         { text: 'Надену сегодня', callback_data: `w:wear:${session.id}` },
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
   if (fallback.ok) return Response.json({ ok: true, widget: false })
 
   const textFallback = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(8000), body: JSON.stringify({
       chat_id: chatId,
       text: morningOutfitMessage(outfit.items),
       reply_markup: { inline_keyboard: [[{ text: 'Открыть образ', web_app: { url: recommendUrl } }]] },

@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     : item.layer_role === 'Второй слой' ? (item.wears_since_wash || 0) >= 2 : true)
   if (!items.length) {
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(8000), body: JSON.stringify({
         chat_id: chatId,
         text: 'На сегодня всё 🤍 Вещей для стирки не отмечено.',
         reply_markup: { inline_keyboard: [[{ text: 'Открыть гардероб', web_app: { url: todayUrl } }]] },
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
   const list = items.map((item) => `• ${item.custom_name || item.description || item.subcategory || item.category}`).join('\n')
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(8000), body: JSON.stringify({
       chat_id: chatId,
       text: `Солнышко, отправить сегодняшние вещи в стирку? 🧺\n\n${list}`,
       reply_markup: { inline_keyboard: [
