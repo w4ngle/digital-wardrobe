@@ -52,6 +52,23 @@ async function handleOutfitAction(token: string, actionData: string, context: {
   let notice = ''
 
   if (parsed.action === 'wear' && status === 'ready') {
+    const { data: claimed, error: claimError } = await admin
+      .from('telegram_widget_sessions')
+      .update({ status: 'worn' })
+      .eq('id', session.id)
+      .eq('status', 'ready')
+      .select('id')
+      .maybeSingle()
+    if (claimError) {
+      await telegram(token, context.widget ? 'answerWidgetQuery' : 'answerCallbackQuery', context.widget
+        ? { widget_query_id: context.queryId, data: JSON.stringify({ error: 'Не удалось сохранить. Попробуйте ещё раз.' }) }
+        : { callback_query_id: context.queryId, text: 'Не удалось сохранить. Попробуйте ещё раз.' })
+      return true
+    }
+    if (!claimed) {
+      status = 'worn'
+      notice = 'Образ уже отмечен'
+    } else {
     const now = new Date().toISOString()
     await Promise.all(items.map(async (item) => {
       await admin.from('items').update({
@@ -63,7 +80,7 @@ async function handleOutfitAction(token: string, actionData: string, context: {
     }))
     status = 'worn'
     notice = 'Отметила образ на сегодня ✨'
-    await admin.from('telegram_widget_sessions').update({ status }).eq('id', session.id)
+    }
   } else if (parsed.action === 'nope' && status === 'ready') {
     const { data: outfit } = await admin.from('outfits').insert({
       name: 'Не моё · утренний образ', occasion: 'На каждый день', notes: 'Оценка из Telegram', rating: -1,
