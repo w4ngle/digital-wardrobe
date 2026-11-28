@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { uploadPhoto } from '@/lib/api'
 import { CATEGORIES, FITS, LAYER_ROLES, LENGTHS, PATTERNS, SEASONS, STYLES, SUBCATEGORIES, supportsFit, supportsLength, supportsSeason, supportsWarmth } from '@/lib/taxonomy'
 import { Camera, ImageSquare } from '@phosphor-icons/react'
@@ -59,6 +59,10 @@ export default function ItemForm({ onSubmit, onCancel }: ItemFormProps) {
   const [backgroundProgress, setBackgroundProgress] = useState(0)
   const [analyzing, setAnalyzing] = useState(false)
   const [aiMeta, setAiMeta] = useState<Record<string, unknown> | null>(null)
+
+  useEffect(() => () => {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+  }, [photoPreview])
 
   const handleRemoveBackground = async () => {
     if (!photoFile) return

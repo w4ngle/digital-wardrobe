@@ -6,6 +6,7 @@ import { Item } from '@/lib/supabase'
 import { outfitWidgetState, parseOutfitWidgetAction } from '@/lib/telegram-widget'
 import { appUrl, morningOutfitMessage, recommendUrl } from '@/lib/bot-messages'
 import { outfitCardToken } from '@/lib/outfit-card-token'
+import { moscowDayStart } from '@/lib/date'
 
 type TelegramUpdate = {
   message?: {
@@ -177,7 +178,7 @@ export async function POST(request: Request) {
 
   if (callback && allowedTelegramUserIds().includes(callback.from.id) && callback.data?.startsWith('laundry:')) {
     const admin = getSupabaseAdmin()
-    const since = new Date(); since.setUTCHours(0, 0, 0, 0)
+    const since = moscowDayStart()
     const { data: worn } = await admin.from('items').select('id').gte('last_worn_at', since.toISOString())
     const ids = worn?.map((item) => item.id) || []
     if (ids.length && callback.data === 'laundry:all') {

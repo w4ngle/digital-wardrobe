@@ -3,7 +3,7 @@ export async function removeImageBackground(file: File, onProgress?: (progress: 
   const blob = await removeBackground(file, {
     model: 'isnet_quint8',
     device: 'cpu',
-    proxyToWorker: false,
+    proxyToWorker: true,
     output: { format: 'image/png', quality: 0.9 },
     progress: (_key: string, current: number, total: number) => { onProgress?.(total ? current / total : 0) },
   })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Item } from '@/lib/supabase'
 import { uploadPhoto } from '@/lib/api'
 import { Camera, ImageSquare, X } from '@phosphor-icons/react'
@@ -38,6 +38,10 @@ export default function EditItemModal({ item, onSave, onClose }: EditItemModalPr
   const [loading, setLoading] = useState(false)
   const [removingBackground, setRemovingBackground] = useState(false)
   const [backgroundProgress, setBackgroundProgress] = useState(0)
+
+  useEffect(() => () => {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+  }, [photoPreview])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

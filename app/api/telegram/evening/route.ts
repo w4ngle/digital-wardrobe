@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { isCronRequest } from '@/lib/cron-auth'
 import { todayUrl } from '@/lib/bot-messages'
+import { moscowDayStart } from '@/lib/date'
 
 export async function GET(request: Request) {
   if (!isCronRequest(request)) return new Response('Unauthorized', { status: 401 })
@@ -8,8 +9,7 @@ export async function GET(request: Request) {
   const chatId = process.env.TELEGRAM_ALLOWED_USER_ID
   if (!token || !chatId) return new Response('Telegram is not configured', { status: 500 })
 
-  const since = new Date()
-  since.setUTCHours(0, 0, 0, 0)
+  const since = moscowDayStart()
   const { data: wornItems, error } = await getSupabaseAdmin().from('items').select('id, description, custom_name, subcategory, category, layer_role, wears_since_wash').gte('last_worn_at', since.toISOString())
   if (error) return new Response(error.message, { status: 500 })
   const items = (wornItems || []).filter((item) => item.category === 'Верхняя одежда'
